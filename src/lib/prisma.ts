@@ -30,12 +30,7 @@ async function ensureSqliteDatabase() {
     try {
       const tables = await prisma.$queryRawUnsafe<Array<{ name: string }>>("SELECT name FROM sqlite_master WHERE type='table' AND name='Paper'");
       if (tables.length === 0) {
-        const sql = await readFile(path.join(process.cwd(), "prisma", "init.sql"), "utf-8");
-        const statements = sql
-          .split(";")
-          .map((statement) => statement.trim())
-          .filter(Boolean);
-        for (const statement of statements) {
+        for (const statement of await getRuntimeInitStatements()) {
           await prisma.$executeRawUnsafe(statement);
         }
       }
@@ -54,3 +49,18 @@ prisma.$use(async (_params, next) => {
   }
   return next(_params);
 });
+
+async function getRuntimeInitStatements() {
+  const sql = await readFile(path.join(process.cwd(), "prisma", "init.sql"), "utf-8");
+  return sql
+    .split(";")
+    .map((statement) => statement.trim())
+    .filter(Boolean)
+    .filter((statement) => !/^DROP TABLE/i.test(statement))
+    .map((statement) =>
+      statement
+        .replace(/^CREATE TABLE\s+/i, "CREATE TABLE IF NOT EXISTS ")
+        .replace(/^CREATE UNIQUE INDEX\s+/i, "CREATE UNIQUE INDEX IF NOT EXISTS ")
+        .replace(/^CREATE INDEX\s+/i, "CREATE INDEX IF NOT EXISTS ")
+    );
+}
