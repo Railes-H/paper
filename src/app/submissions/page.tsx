@@ -8,6 +8,8 @@ import { rejectReasonCategoryLabels, reviewStageLabels, submissionResultLabels, 
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function SubmissionsPage({ searchParams }: { searchParams?: { q?: string; status?: string; type?: string; result?: string; year?: string; format?: string; rejectionReview?: string } }) {
   const year = searchParams?.year ? Number(searchParams.year) : null;
   const submissions = await prisma.submission.findMany({

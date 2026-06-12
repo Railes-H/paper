@@ -17,6 +17,8 @@ import { prisma } from "@/lib/prisma";
 import { buildSuggestions } from "@/lib/suggestions";
 import { formatDate } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function SubmissionDetailPage({ params }: { params: { id: string } }) {
   const submission = await prisma.submission.findUnique({
     where: { id: params.id },

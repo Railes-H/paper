@@ -4,6 +4,8 @@ import { PaperForm } from "@/components/paper-form";
 import { collectResearchAreaOptions, collectVersionOptions } from "@/lib/paper-fields";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function EditPaperPage({ params }: { params: { id: string } }) {
   const [paper, papers] = await Promise.all([
     prisma.paper.findUnique({ where: { id: params.id } }),

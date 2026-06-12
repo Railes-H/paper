@@ -18,6 +18,8 @@ const tones: Record<string, "blue" | "green" | "red" | "yellow" | "purple" | "or
   SUBMISSION: "slate"
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function CalendarPage({ searchParams }: { searchParams?: { view?: string; type?: string; range?: string; month?: string } }) {
   const submissions = await prisma.submission.findMany({
     include: { paper: true, venue: { include: { conferenceInfo: true } } },

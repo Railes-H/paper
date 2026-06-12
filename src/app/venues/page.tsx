@@ -6,6 +6,8 @@ import { feeStatusLabels, researchFitLabels, valueLevelLabels, venueTypeLabels, 
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function VenuesPage({ searchParams }: { searchParams?: { q?: string; type?: string; self?: string; worth?: string; again?: string; cost?: string; difficulty?: string; academic?: string } }) {
   const venues = await prisma.venue.findMany({
     where: {

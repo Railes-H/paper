@@ -3,6 +3,8 @@ import { PageHeader } from "@/components/page-header";
 import { SubmissionForm } from "@/components/submission-form";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewSubmissionPage() {
   const [papers, venues] = await Promise.all([
     prisma.paper.findMany({ orderBy: { updatedAt: "desc" } }),

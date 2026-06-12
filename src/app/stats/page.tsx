@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { buildSuggestions } from "@/lib/suggestions";
 import { reviewDays } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function StatsPage() {
   const [papers, versions, submissions, venues, files, persistedSuggestions] = await Promise.all([
     prisma.paper.findMany({ include: { versions: true } }),

@@ -9,6 +9,8 @@ import { prisma } from "@/lib/prisma";
 import { buildSuggestions } from "@/lib/suggestions";
 import { formatDate } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function PaperDetailPage({ params }: { params: { id: string } }) {
   const paper = await prisma.paper.findUnique({
     where: { id: params.id },

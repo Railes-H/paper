@@ -5,6 +5,8 @@ import mammoth from "mammoth";
 import pdfParse from "pdf-parse/lib/pdf-parse";
 import { recognizePaperText } from "@/lib/document-recognition";
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   const data = await request.formData();
   const file = data.get("file");
@@ -19,12 +21,8 @@ export async function POST(request: NextRequest) {
   }
 
   const bytes = Buffer.from(await uploadedFile.arrayBuffer());
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadDir, { recursive: true });
   const safeName = `${Date.now()}-${uploadedFile.name.replace(/[^\w.\-\u4e00-\u9fa5]+/g, "_")}`;
-  const targetPath = path.join(uploadDir, safeName);
-  await writeFile(targetPath, bytes);
-  const fileUrl = `/uploads/${safeName}`;
+  const fileUrl = await persistUploadedFile(bytes, safeName);
 
   try {
     let text = "";
@@ -39,7 +37,13 @@ export async function POST(request: NextRequest) {
     }
 
     const fileType = ext === ".pdf" ? "MASTER_PDF" : "MASTER_WORD";
-    return NextResponse.json(recognizePaperText(text, uploadedFile.name, fileType, fileUrl));
+    const result = recognizePaperText(text, uploadedFile.name, fileType, fileUrl);
+    return NextResponse.json({
+      ...result,
+      warning: [result.warning, process.env.VERCEL ? "Vercel 线上环境已完成识别，但未保存原文件；如需长期下载请接入 Vercel Blob 或对象存储。" : ""]
+        .filter(Boolean)
+        .join(" ")
+    });
   } catch {
     const fileType = ext === ".pdf" ? "MASTER_PDF" : "MASTER_WORD";
     return NextResponse.json({
@@ -50,7 +54,19 @@ export async function POST(request: NextRequest) {
       fileName: uploadedFile.name,
       fileType,
       fileUrl,
-      warning: "自动识别失败，可手动填写论文信息。"
+      warning: `自动识别失败，可手动填写论文信息。${process.env.VERCEL ? " Vercel 线上环境未保存原文件。" : ""}`
     });
   }
+}
+
+async function persistUploadedFile(bytes: Buffer, safeName: string) {
+  if (process.env.VERCEL) {
+    return `vercel-memory://${safeName}`;
+  }
+
+  const uploadDir = path.join(process.cwd(), "public", "uploads");
+  await mkdir(uploadDir, { recursive: true });
+  const targetPath = path.join(uploadDir, safeName);
+  await writeFile(targetPath, bytes);
+  return `/uploads/${safeName}`;
 }

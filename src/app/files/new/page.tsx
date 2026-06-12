@@ -2,6 +2,8 @@ import { FileForm } from "@/components/file-form";
 import { PageHeader } from "@/components/page-header";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewFilePage() {
   const [papers, versions, submissions] = await Promise.all([
     prisma.paper.findMany({ orderBy: { updatedAt: "desc" } }),

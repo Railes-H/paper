@@ -7,6 +7,8 @@ import { fileTypeLabels } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function FilesPage({ searchParams }: { searchParams?: { q?: string; type?: string; paperId?: string } }) {
   const [files, papers] = await Promise.all([
     prisma.fileRecord.findMany({

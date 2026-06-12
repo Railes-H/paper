@@ -12,6 +12,8 @@ import { computeSubmissionReminders } from "@/lib/reminders";
 import { buildSuggestions } from "@/lib/suggestions";
 import { formatDate, isActiveSubmission } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const [papers, allPapers, submissions, venues, persistedSuggestions, recentFiles] = await Promise.all([
     prisma.paper.findMany({

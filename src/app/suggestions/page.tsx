@@ -5,6 +5,8 @@ import { priorityLabels, suggestionTypeLabels } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
 import { buildSuggestions } from "@/lib/suggestions";
 
+export const dynamic = "force-dynamic";
+
 export default async function SuggestionsPage({ searchParams }: { searchParams?: { type?: string; priority?: string; done?: string } }) {
   const [papers, submissions, venues, persistedSuggestions] = await Promise.all([
     prisma.paper.findMany({ include: { versions: true } }),

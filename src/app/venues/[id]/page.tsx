@@ -13,6 +13,8 @@ import {
 } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function VenueDetailPage({ params }: { params: { id: string } }) {
   const venue = await prisma.venue.findUnique({
     where: { id: params.id },

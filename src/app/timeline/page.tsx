@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { computeSubmissionReminders } from "@/lib/reminders";
 import { daysBetween, formatDate } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function TimelinePage({ searchParams }: { searchParams?: { range?: string } }) {
   const submissions = await prisma.submission.findMany({
     include: {

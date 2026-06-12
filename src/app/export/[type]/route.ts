@@ -5,6 +5,8 @@ import { displayResearchAreas } from "@/lib/paper-fields";
 import { prisma } from "@/lib/prisma";
 import { reviewDays } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(_request: NextRequest, { params }: { params: { type: string } }) {
   const type = params.type;
   if (type === "papers") {

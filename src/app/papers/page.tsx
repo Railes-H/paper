@@ -8,6 +8,8 @@ import { displayResearchAreas } from "@/lib/paper-fields";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function PapersPage({
   searchParams
 }: {
