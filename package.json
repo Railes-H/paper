@@ -1,0 +1,36 @@
+{
+  "name": "papertrack",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:generate": "prisma generate",
+    "db:init": "mkdir -p /Users/railes/.papertrack && sqlite3 /Users/railes/.papertrack/dev.db < prisma/init.sql",
+    "db:push": "npm run db:init",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "npm run db:init && npm run db:seed"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "clsx": "2.1.1",
+    "lucide-react": "0.468.0",
+    "mammoth": "^1.8.0",
+    "next": "13.5.6",
+    "pdf-parse": "^1.1.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.30",
+    "@types/react": "18.2.67",
+    "@types/react-dom": "18.2.22",
+    "autoprefixer": "10.4.19",
+    "postcss": "8.4.38",
+    "prisma": "5.22.0",
+    "tailwindcss": "3.4.3",
+    "tsx": "4.7.1",
+    "typescript": "5.4.2"
+  }
+}

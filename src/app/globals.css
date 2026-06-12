@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 18px 18px, rgba(255, 212, 71, 0.28) 0 5px, transparent 6px),
+    radial-gradient(circle at 88% 12%, rgba(67, 167, 255, 0.18), transparent 28%),
+    linear-gradient(135deg, #fff8e8 0%, #fffdf8 48%, #eef8ff 100%);
+  background-size: 48px 48px, auto, auto;
+  color: #24304f;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(255, 212, 71, 0.72);
+  color: #24304f;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@layer components {
+  .field {
+    @apply w-full rounded-md border-2 border-line bg-white/90 px-3 py-2 text-sm text-ink outline-none transition placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-red-100;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-bold uppercase tracking-normal text-muted;
+  }
+
+  .btn {
+    @apply inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md border-2 px-3 text-sm font-bold transition active:translate-x-0.5 active:translate-y-0.5;
+  }
+
+  .btn-primary {
+    @apply btn border-ink bg-primary text-white shadow-sticker hover:-translate-y-0.5 hover:bg-red-500;
+  }
+
+  .btn-secondary {
+    @apply btn border-line bg-white text-ink hover:-translate-y-0.5 hover:border-sky hover:bg-blue-50;
+  }
+
+  .btn-danger {
+    @apply btn border-red-200 bg-red-50 text-red-700 hover:-translate-y-0.5 hover:bg-red-100;
+  }
+
+  .back-link {
+    @apply inline-flex h-9 w-fit items-center gap-2 rounded-md border-2 border-line bg-white/90 px-2.5 pr-3 text-sm font-black text-ink shadow-[3px_3px_0_rgba(36,48,79,0.08)] transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:border-ink hover:bg-yellow-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-yellow-200 active:translate-x-0 active:translate-y-0;
+  }
+
+  .back-icon {
+    @apply flex h-6 w-6 items-center justify-center rounded-md border-2 border-ink bg-sunshine text-ink shadow-[2px_2px_0_rgba(36,48,79,0.1)];
+  }
+
+  .panel {
+    @apply rounded-lg border-2 border-line bg-white/90 shadow-soft backdrop-blur;
+  }
+
+  .table-th {
+    @apply whitespace-nowrap bg-yellow-50 px-4 py-3 text-left text-xs font-black text-ink;
+  }
+
+  .table-td {
+    @apply border-t border-orange-100 px-4 py-3 text-sm text-slate-700;
+  }
+
+  .paper-link {
+    @apply font-bold text-sky underline-offset-4 hover:text-primary hover:underline;
+  }
+}
+
+tbody tr {
+  transition: background-color 160ms ease;
+}
+
+tbody tr:hover td {
+  background: rgba(255, 250, 225, 0.74);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wiggle-on-hover:hover {
+    animation: papertrack-wiggle 420ms ease-in-out;
+  }
+}
+
+@keyframes papertrack-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-1.5deg); }
+  75% { transform: rotate(1.5deg); }
+}

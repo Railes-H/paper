@@ -1,0 +1,265 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Paper {
+  id                String         @id @default(cuid())
+  title             String
+  researchArea      String
+  authors           String
+  masterAbstract    String?
+  masterKeywords    String?
+  masterWordCount   Int?
+  masterFileUrl     String?
+  currentStatus     String         @default("WRITING")
+  currentVersion    String?
+  latestUpdateDate  DateTime?
+  notes             String?
+  versions          PaperVersion[]
+  submissions       Submission[]
+  files             FileRecord[]
+  suggestions       Suggestion[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model PaperVersion {
+  id                    String          @id @default(cuid())
+  paperId               String
+  templateId            String?
+  versionName           String
+  versionType           String
+  targetVenueId         String?
+  fileUrl               String?
+  wordLimit             Int?
+  actualWordCount       Int?
+  abstractWordLimit     Int?
+  keywordRequirement    String?
+  referenceStyle        String?
+  citationStyle         String?
+  isAnonymous           Boolean         @default(false)
+  needsAuthorBio        Boolean         @default(false)
+  needsFundingInfo      Boolean         @default(false)
+  needsEnglishTitle     Boolean         @default(false)
+  needsEnglishAbstract  Boolean         @default(false)
+  needsEnglishKeywords  Boolean         @default(false)
+  needsPlagiarismReport Boolean         @default(false)
+  fileNamingRule        String?
+  submissionMaterials   String?
+  formatRequirementText String?
+  formatNotes           String?
+  reuseLevel            String          @default("MEDIUM")
+  paper                 Paper           @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  template              FormatTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  targetVenue           Venue?          @relation(fields: [targetVenueId], references: [id], onDelete: SetNull)
+  submissions           Submission[]
+  files                 FileRecord[]
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+}
+
+model FormatTemplate {
+  id                         String         @id @default(cuid())
+  venueId                    String?
+  templateName               String
+  venueType                  String
+  wordLimit                  Int?
+  abstractRequirement        String?
+  keywordRequirement         String?
+  referenceStyle             String?
+  citationStyle              String?
+  anonymousRequirement       Boolean        @default(false)
+  authorInfoRequirement      Boolean        @default(false)
+  fundingRequirement         Boolean        @default(false)
+  englishTitleRequirement    Boolean        @default(false)
+  englishAbstractRequirement Boolean        @default(false)
+  englishKeywordsRequirement Boolean        @default(false)
+  plagiarismReportRequirement Boolean       @default(false)
+  fileNamingRule             String?
+  submissionMaterials        String?
+  formatRequirementText      String?
+  notes                      String?
+  venue                      Venue?         @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  versions                   PaperVersion[]
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
+}
+
+model Venue {
+  id             String           @id @default(cuid())
+  name           String
+  type           String
+  organizer      String?
+  level          String?
+  website        String?
+  submissionUrl  String?
+  researchFit    String           @default("UNKNOWN")
+  notes          String?
+  conferenceInfo ConferenceInfo?
+  journalInfo    JournalInfo?
+  evaluation     VenueEvaluation?
+  templates      FormatTemplate[]
+  versions       PaperVersion[]
+  submissions    Submission[]
+  suggestions    Suggestion[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model VenueEvaluation {
+  id                    String   @id @default(cuid())
+  venueId               String   @unique
+  academicValue         String   @default("UNKNOWN")
+  submissionDifficulty  String   @default("UNKNOWN")
+  costPressure          String   @default("UNKNOWN")
+  participationValue    String   @default("UNKNOWN")
+  studentFriendly       String   @default("UNKNOWN")
+  worthSubmittingAgain  String   @default("UNKNOWN")
+  networkingValue       String   @default("UNKNOWN")
+  resumeValue           String   @default("UNKNOWN")
+  hasProceedings        String   @default("UNKNOWN")
+  hasCertificate        String   @default("UNKNOWN")
+  mustAttendOffline     String   @default("UNKNOWN")
+  mustPresent           String   @default("UNKNOWN")
+  evaluationNotes       String?
+  venue                 Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model ConferenceInfo {
+  id                    String          @id @default(cuid())
+  venueId               String          @unique
+  deadline              DateTime?
+  notificationDate      DateTime?
+  conferenceStartDate   DateTime?
+  conferenceEndDate     DateTime?
+  location              String?
+  isOnline              Boolean         @default(false)
+  registrationRequired  Boolean         @default(false)
+  registrationFee       Float?
+  needSelfFunded        Boolean         @default(false)
+  reimbursable          Boolean         @default(false)
+  travelBudget          Float?
+  accommodationBudget   Float?
+  totalBudget           Float?
+  worthAttending        String          @default("UNKNOWN")
+  feeStatus             String          @default("UNKNOWN")
+  callForPapersUrl      String?
+  notes                 String?
+  venue                 Venue           @relation(fields: [venueId], references: [id], onDelete: Cascade)
+}
+
+model JournalInfo {
+  id                  String       @id @default(cuid())
+  venueId             String       @unique
+  journalLevel        String       @default("OTHER")
+  submissionSystemUrl String?
+  officialWebsite     String?
+  hasReviewFee        Boolean      @default(false)
+  reviewFee           Float?
+  hasPublicationFee   Boolean      @default(false)
+  publicationFee      Float?
+  feeNotes            String?
+  notes               String?
+  venue               Venue        @relation(fields: [venueId], references: [id], onDelete: Cascade)
+}
+
+model Submission {
+  id                    String           @id @default(cuid())
+  paperId               String
+  paperVersionId        String
+  venueId               String
+  submissionType        String
+  submissionDate        DateTime?
+  deadline              DateTime?
+  status                String           @default("PREPARING")
+  result                String           @default("PENDING")
+  resultDate            DateTime?
+  submissionSystemUrl   String?
+  submittedFileUrl      String?
+  receiptUrl            String?
+  submissionMaterials   String?
+  formatChecked         Boolean          @default(false)
+  submittedSuccessfully Boolean          @default(false)
+  reviewStage           String           @default("NOT_STARTED")
+  reviewNotes           String?
+  rejectReason          String?
+  rejectReasonCategory  String?
+  rejectReasonDetail    String?
+  reviewerComments      String?
+  selfReflection        String?
+  improvementPlan       String?
+  nextSubmissionStrategy String?
+  targetAfterRejection  String?
+  rejectionSeverity     String   @default("UNKNOWN")
+  canReuseVersion       String   @default("UNKNOWN")
+  needsMajorRevision    String   @default("UNKNOWN")
+  revisionDate          DateTime?
+  revisionDeadline      DateTime?
+  revisionSubmittedDate DateTime?
+  acceptDate            DateTime?
+  rejectDate            DateTime?
+  nextAction            String?
+  paper                 Paper            @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  paperVersion          PaperVersion     @relation(fields: [paperVersionId], references: [id], onDelete: Restrict)
+  venue                 Venue            @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  reminders             Reminder[]
+  files                 FileRecord[]
+  suggestions           Suggestion[]
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+}
+
+model Reminder {
+  id            String       @id @default(cuid())
+  submissionId  String?
+  reminderType  String
+  title         String
+  reminderDate  DateTime
+  isDone        Boolean      @default(false)
+  notes         String?
+  submission    Submission?  @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model FileRecord {
+  id                    String        @id @default(cuid())
+  fileName              String
+  fileType              String
+  fileUrl               String
+  relatedPaperId        String?
+  relatedPaperVersionId String?
+  relatedSubmissionId   String?
+  versionLabel          String?
+  uploadDate            DateTime?
+  notes                 String?
+  relatedPaper          Paper?        @relation(fields: [relatedPaperId], references: [id], onDelete: SetNull)
+  relatedPaperVersion   PaperVersion? @relation(fields: [relatedPaperVersionId], references: [id], onDelete: SetNull)
+  relatedSubmission     Submission?   @relation(fields: [relatedSubmissionId], references: [id], onDelete: SetNull)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model Suggestion {
+  id                  String      @id
+  suggestionTitle     String
+  suggestionType      String
+  suggestionContent   String
+  priority            String      @default("MEDIUM")
+  relatedPaperId      String?
+  relatedSubmissionId String?
+  relatedVenueId      String?
+  isDone              Boolean     @default(false)
+  relatedPaper        Paper?      @relation(fields: [relatedPaperId], references: [id], onDelete: SetNull)
+  relatedSubmission   Submission? @relation(fields: [relatedSubmissionId], references: [id], onDelete: SetNull)
+  relatedVenue        Venue?      @relation(fields: [relatedVenueId], references: [id], onDelete: SetNull)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+}
