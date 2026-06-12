@@ -78,7 +78,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="absolute bottom-5 left-4 right-4 rounded-lg border-2 border-line bg-rose-50 p-3 text-xs font-medium leading-5 text-muted">
           <Settings2 className="mb-2 h-4 w-4 text-primary" />
-          本地 SQLite 存储，不含登录和云同步，适合个人长期维护。
+          Postgres 持久化数据，Vercel Blob 保存文件，适合个人长期维护。
         </div>
       </aside>
       <main className="min-h-screen px-4 py-4 lg:ml-64 lg:px-8 lg:py-7">{children}</main>

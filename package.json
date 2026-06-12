@@ -9,12 +9,14 @@
     "dev": "next dev",
     "postinstall": "prisma generate",
     "build": "next build",
+    "vercel-build": "prisma migrate deploy && next build",
     "start": "next start",
     "db:generate": "prisma generate",
-    "db:init": "mkdir -p /Users/railes/.papertrack && sqlite3 /Users/railes/.papertrack/dev.db < prisma/init.sql",
-    "db:push": "npm run db:init",
+    "db:init": "prisma migrate deploy",
+    "db:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "npm run db:init && npm run db:seed"
+    "db:reset": "prisma migrate reset --force && npm run db:seed"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
