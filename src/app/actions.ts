@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type {
@@ -14,6 +15,7 @@ import type {
   WorthAttending
 } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
+import { deleteStoredFile } from "@/lib/file-storage";
 import {
   parseBoolean,
   parseDate,
@@ -27,6 +29,11 @@ export async function createPaper(formData: FormData) {
   const uploadedFileUrl = parseOptionalString(formData.get("uploadedFileUrl"));
   const uploadedFileName = parseOptionalString(formData.get("uploadedFileName"));
   const uploadedFileType = parseOptionalString(formData.get("uploadedFileType"));
+  const uploadedDownloadUrl = parseOptionalString(formData.get("uploadedDownloadUrl"));
+  const uploadedStorageProvider = parseOptionalString(formData.get("uploadedStorageProvider"));
+  const uploadedStoragePath = parseOptionalString(formData.get("uploadedStoragePath"));
+  const uploadedMimeType = parseOptionalString(formData.get("uploadedMimeType"));
+  const uploadedFileSize = parseIntField(formData.get("uploadedFileSize"));
   const currentVersion = parseOptionalString(formData.get("currentVersion"));
   const paper = await prisma.paper.create({
     data: {
@@ -49,9 +56,17 @@ export async function createPaper(formData: FormData) {
         fileName: uploadedFileName,
         fileType: uploadedFileType,
         fileUrl: uploadedFileUrl,
+        downloadUrl: uploadedDownloadUrl,
+        storageProvider: uploadedStorageProvider ?? "EXTERNAL",
+        storagePath: uploadedStoragePath,
+        mimeType: uploadedMimeType,
+        fileSize: uploadedFileSize,
         relatedPaperId: paper.id,
+        versionGroupId: randomUUID(),
+        versionNumber: 1,
         versionLabel: currentVersion,
         uploadDate: new Date(),
+        isCurrent: true,
         notes: "自动识别生成的完整版论文文件"
       }
     });
@@ -210,7 +225,11 @@ export async function createSubmission(formData: FormData) {
   const submissionType = formData.get("submissionType") as VenueType;
   const isJournal = submissionType === "JOURNAL";
   const submittedFileUrl = parseOptionalString(formData.get("submittedFileUrl"));
+  const submittedFileRecordId = parseOptionalString(formData.get("submittedFileRecordId"));
   const formatDocumentUrl = parseOptionalString(formData.get("formatDocumentUrl"));
+  const selectedSubmittedFile = submittedFileRecordId
+    ? await prisma.fileRecord.findUnique({ where: { id: submittedFileRecordId }, select: { fileUrl: true } })
+    : null;
   const venue = await prisma.venue.findUnique({ where: { id: venueId }, select: { name: true } });
   const formatLabel = parseOptionalString(formData.get("formatLabel")) ?? `${venue?.name ?? "投稿对象"}格式`;
   const paperVersion = await prisma.paperVersion.create({
@@ -220,7 +239,7 @@ export async function createSubmission(formData: FormData) {
       targetVenueId: venueId,
       versionName: formatLabel,
       versionType: submissionType,
-      fileUrl: formatDocumentUrl ?? submittedFileUrl,
+      fileUrl: selectedSubmittedFile?.fileUrl ?? formatDocumentUrl ?? submittedFileUrl,
       wordLimit: parseIntField(formData.get("wordLimit")),
       actualWordCount: parseIntField(formData.get("actualWordCount")),
       referenceStyle: parseOptionalString(formData.get("referenceStyle")),
@@ -244,7 +263,8 @@ export async function createSubmission(formData: FormData) {
       result: formData.get("result") as SubmissionResult,
       resultDate: parseDate(formData.get("resultDate")),
       submissionSystemUrl: parseOptionalString(formData.get("submissionSystemUrl")),
-      submittedFileUrl: submittedFileUrl ?? formatDocumentUrl,
+      submittedFileUrl: selectedSubmittedFile?.fileUrl ?? submittedFileUrl ?? formatDocumentUrl,
+      submittedFileRecordId,
       receiptUrl: parseOptionalString(formData.get("receiptUrl")),
       submissionMaterials: parseOptionalString(formData.get("submissionMaterials")),
       formatChecked: parseBoolean(formData.get("formatChecked")),
@@ -300,16 +320,25 @@ export async function updateRejectionReview(id: string, formData: FormData) {
 }
 
 export async function createFileRecord(formData: FormData) {
+  const uploadedFileUrl = parseOptionalString(formData.get("uploadedFileUrl"));
   await prisma.fileRecord.create({
     data: {
       fileName: parseString(formData.get("fileName")),
       fileType: parseString(formData.get("fileType")),
-      fileUrl: parseString(formData.get("fileUrl")),
+      fileUrl: uploadedFileUrl ?? parseString(formData.get("fileUrl")),
+      downloadUrl: parseOptionalString(formData.get("uploadedDownloadUrl")),
+      storageProvider: parseOptionalString(formData.get("uploadedStorageProvider")) ?? "EXTERNAL",
+      storagePath: parseOptionalString(formData.get("uploadedStoragePath")),
+      mimeType: parseOptionalString(formData.get("uploadedMimeType")),
+      fileSize: parseIntField(formData.get("uploadedFileSize")),
       relatedPaperId: parseOptionalString(formData.get("relatedPaperId")),
       relatedPaperVersionId: parseOptionalString(formData.get("relatedPaperVersionId")),
       relatedSubmissionId: parseOptionalString(formData.get("relatedSubmissionId")),
+      versionGroupId: randomUUID(),
+      versionNumber: parseIntField(formData.get("versionNumber")) ?? 1,
       versionLabel: parseOptionalString(formData.get("versionLabel")),
-      uploadDate: parseDate(formData.get("uploadDate")),
+      uploadDate: parseDate(formData.get("uploadDate")) ?? new Date(),
+      isCurrent: true,
       notes: parseOptionalString(formData.get("notes"))
     }
   });
@@ -318,15 +347,64 @@ export async function createFileRecord(formData: FormData) {
 }
 
 export async function updateFileRecord(id: string, formData: FormData) {
+  const uploadedFileUrl = parseOptionalString(formData.get("uploadedFileUrl"));
+  if (uploadedFileUrl) {
+    const current = await prisma.fileRecord.findUnique({ where: { id } });
+    if (!current) return;
+    const versionGroupId = current.versionGroupId ?? current.id;
+    const latest = await prisma.fileRecord.findFirst({
+      where: { versionGroupId },
+      orderBy: { versionNumber: "desc" },
+      select: { versionNumber: true }
+    });
+    const nextVersionNumber = (latest?.versionNumber ?? current.versionNumber ?? 1) + 1;
+    await prisma.$transaction([
+      prisma.fileRecord.updateMany({ where: { versionGroupId }, data: { isCurrent: false } }),
+      prisma.fileRecord.update({ where: { id: current.id }, data: { isCurrent: false, versionGroupId } }),
+      prisma.fileRecord.create({
+        data: {
+          fileName: parseString(formData.get("fileName")),
+          fileType: parseString(formData.get("fileType")),
+          fileUrl: uploadedFileUrl,
+          downloadUrl: parseOptionalString(formData.get("uploadedDownloadUrl")),
+          storageProvider: parseOptionalString(formData.get("uploadedStorageProvider")) ?? "EXTERNAL",
+          storagePath: parseOptionalString(formData.get("uploadedStoragePath")),
+          mimeType: parseOptionalString(formData.get("uploadedMimeType")),
+          fileSize: parseIntField(formData.get("uploadedFileSize")),
+          relatedPaperId: parseOptionalString(formData.get("relatedPaperId")),
+          relatedPaperVersionId: parseOptionalString(formData.get("relatedPaperVersionId")),
+          relatedSubmissionId: parseOptionalString(formData.get("relatedSubmissionId")),
+          sourceFileId: current.id,
+          versionGroupId,
+          versionNumber: nextVersionNumber,
+          versionLabel: parseOptionalString(formData.get("versionLabel")) ?? `V${nextVersionNumber}`,
+          uploadDate: new Date(),
+          isCurrent: true,
+          notes: parseOptionalString(formData.get("notes"))
+        }
+      })
+    ]);
+    revalidatePath("/files");
+    revalidatePath("/papers");
+    revalidatePath("/submissions");
+    redirect("/files");
+  }
+
   await prisma.fileRecord.update({
     where: { id },
     data: {
       fileName: parseString(formData.get("fileName")),
       fileType: parseString(formData.get("fileType")),
       fileUrl: parseString(formData.get("fileUrl")),
+      downloadUrl: parseOptionalString(formData.get("uploadedDownloadUrl")) ?? parseOptionalString(formData.get("downloadUrl")),
+      storageProvider: parseOptionalString(formData.get("uploadedStorageProvider")) ?? parseOptionalString(formData.get("storageProvider")) ?? "EXTERNAL",
+      storagePath: parseOptionalString(formData.get("uploadedStoragePath")) ?? parseOptionalString(formData.get("storagePath")),
+      mimeType: parseOptionalString(formData.get("uploadedMimeType")) ?? parseOptionalString(formData.get("mimeType")),
+      fileSize: parseIntField(formData.get("uploadedFileSize")) ?? parseIntField(formData.get("fileSize")),
       relatedPaperId: parseOptionalString(formData.get("relatedPaperId")),
       relatedPaperVersionId: parseOptionalString(formData.get("relatedPaperVersionId")),
       relatedSubmissionId: parseOptionalString(formData.get("relatedSubmissionId")),
+      versionNumber: parseIntField(formData.get("versionNumber")) ?? 1,
       versionLabel: parseOptionalString(formData.get("versionLabel")),
       uploadDate: parseDate(formData.get("uploadDate")),
       notes: parseOptionalString(formData.get("notes"))
@@ -337,8 +415,22 @@ export async function updateFileRecord(id: string, formData: FormData) {
 }
 
 export async function deleteFileRecord(id: string) {
+  const file = await prisma.fileRecord.findUnique({ where: { id } });
+  if (!file) return;
+  await deleteStoredFile(file.fileUrl, file.storageProvider, file.storagePath).catch(() => undefined);
   await prisma.fileRecord.delete({ where: { id } });
+  if (file.isCurrent && file.versionGroupId) {
+    const previous = await prisma.fileRecord.findFirst({
+      where: { versionGroupId: file.versionGroupId },
+      orderBy: { versionNumber: "desc" }
+    });
+    if (previous) {
+      await prisma.fileRecord.update({ where: { id: previous.id }, data: { isCurrent: true } });
+    }
+  }
   revalidatePath("/files");
+  revalidatePath("/papers");
+  revalidatePath("/submissions");
 }
 
 export async function markSuggestionDone(id: string, formData: FormData) {

@@ -33,6 +33,8 @@ async function ensureSqliteDatabase() {
         for (const statement of await getRuntimeInitStatements()) {
           await prisma.$executeRawUnsafe(statement);
         }
+      } else {
+        await applyRuntimeSchemaUpdates();
       }
       isReady = true;
     } finally {
@@ -41,6 +43,34 @@ async function ensureSqliteDatabase() {
   })();
 
   return readyPromise;
+}
+
+async function applyRuntimeSchemaUpdates() {
+  await ensureColumns("FileRecord", [
+    ["downloadUrl", "TEXT"],
+    ["storageProvider", "TEXT NOT NULL DEFAULT 'EXTERNAL'"],
+    ["storagePath", "TEXT"],
+    ["mimeType", "TEXT"],
+    ["fileSize", "INTEGER"],
+    ["sourceFileId", "TEXT"],
+    ["versionGroupId", "TEXT"],
+    ["versionNumber", "INTEGER NOT NULL DEFAULT 1"],
+    ["isCurrent", "BOOLEAN NOT NULL DEFAULT 1"]
+  ]);
+  await ensureColumns("Submission", [["submittedFileRecordId", "TEXT"]]);
+  await prisma.$executeRawUnsafe("UPDATE FileRecord SET storageProvider = 'EXTERNAL' WHERE storageProvider IS NULL OR storageProvider = ''");
+  await prisma.$executeRawUnsafe("UPDATE FileRecord SET versionNumber = 1 WHERE versionNumber IS NULL");
+  await prisma.$executeRawUnsafe("UPDATE FileRecord SET isCurrent = 1 WHERE isCurrent IS NULL");
+}
+
+async function ensureColumns(tableName: string, columns: Array<[string, string]>) {
+  const rows = await prisma.$queryRawUnsafe<Array<{ name: string }>>(`PRAGMA table_info("${tableName}")`);
+  const existing = new Set(rows.map((row) => row.name));
+  for (const [name, definition] of columns) {
+    if (!existing.has(name)) {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "${tableName}" ADD COLUMN "${name}" ${definition}`);
+    }
+  }
 }
 
 prisma.$use(async (_params, next) => {

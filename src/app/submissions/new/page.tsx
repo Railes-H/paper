@@ -6,9 +6,14 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function NewSubmissionPage() {
-  const [papers, venues] = await Promise.all([
+  const [papers, venues, files] = await Promise.all([
     prisma.paper.findMany({ orderBy: { updatedAt: "desc" } }),
-    prisma.venue.findMany({ orderBy: { updatedAt: "desc" } })
+    prisma.venue.findMany({ orderBy: { updatedAt: "desc" } }),
+    prisma.fileRecord.findMany({
+      where: { isCurrent: true },
+      include: { relatedPaper: true },
+      orderBy: { updatedAt: "desc" }
+    })
   ]);
 
   if (papers.length === 0 || venues.length === 0) {
@@ -34,6 +39,15 @@ export default async function NewSubmissionPage() {
           title: paper.title
         }))}
         venues={venues.map((venue) => ({ id: venue.id, name: venue.name, type: venue.type }))}
+        files={files.map((file) => ({
+          id: file.id,
+          fileName: file.fileName,
+          fileType: file.fileType,
+          fileSize: file.fileSize,
+          versionNumber: file.versionNumber,
+          versionLabel: file.versionLabel,
+          relatedPaperId: file.relatedPaperId
+        }))}
       />
     </>
   );

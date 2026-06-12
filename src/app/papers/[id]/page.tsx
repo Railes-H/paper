@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import { deleteSubmission } from "@/app/actions";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { paperStatusLabels, submissionResultLabels, submissionStatusLabels, venueTypeLabels } from "@/lib/labels";
+import { fileTypeLabels, paperStatusLabels, submissionResultLabels, submissionStatusLabels, venueTypeLabels } from "@/lib/labels";
 import { displayResearchAreas } from "@/lib/paper-fields";
 import { prisma } from "@/lib/prisma";
 import { buildSuggestions } from "@/lib/suggestions";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatFileSize } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -141,11 +141,26 @@ export default async function PaperDetailPage({ params }: { params: { id: string
       <section className="panel p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-ink">相关文件</h2>
-          <Link href="/files/new" className="btn-secondary">新增文件</Link>
+          <Link href={`/files/new?paperId=${paper.id}`} className="btn-secondary">新增文件</Link>
         </div>
-        <div className="grid gap-2">
+        <div className="grid gap-3 md:grid-cols-2">
           {paper.files.length ? paper.files.map((file) => (
-            <a key={file.id} href={file.fileUrl} className="rounded-md bg-slate-50 px-3 py-2 text-sm text-blue-700">{file.fileName} · {file.versionLabel ?? file.fileType}</a>
+            <div key={file.id} className="rounded-lg border border-line bg-slate-50 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-ink">{file.fileName}</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    {fileTypeLabels[file.fileType] ?? file.fileType} · V{file.versionNumber}{file.versionLabel ? ` · ${file.versionLabel}` : ""} · {formatFileSize(file.fileSize)} · {formatDate(file.uploadDate ?? file.createdAt)}
+                  </div>
+                </div>
+                <StatusBadge tone={file.isCurrent ? "green" : "slate"}>{file.isCurrent ? "当前" : "历史"}</StatusBadge>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a className="btn-secondary h-8" href={file.fileUrl} target="_blank" rel="noreferrer">查看</a>
+                <a className="btn-secondary h-8" href={file.downloadUrl ?? file.fileUrl}>下载</a>
+                <Link className="btn-secondary h-8" href={`/files/${file.id}/edit`}>替换</Link>
+              </div>
+            </div>
           )) : <p className="text-sm text-slate-500">暂无关联文件。</p>}
         </div>
       </section>

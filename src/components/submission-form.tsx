@@ -3,12 +3,14 @@
 import { useMemo, useState } from "react";
 import { createSubmission } from "@/app/actions";
 import {
+  fileTypeLabels,
   finalSubmissionResultLabels,
   forumSubmissionStatusLabels,
   journalSubmissionStatusLabels,
   reviewStageLabels,
   venueTypeLabels
 } from "@/lib/labels";
+import { formatFileSize } from "@/lib/utils";
 
 type PaperOption = {
   id: string;
@@ -21,7 +23,17 @@ type VenueOption = {
   type: string;
 };
 
-export function SubmissionForm({ papers, venues }: { papers: PaperOption[]; venues: VenueOption[] }) {
+type FileOption = {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number | null;
+  versionNumber: number;
+  versionLabel: string | null;
+  relatedPaperId: string | null;
+};
+
+export function SubmissionForm({ papers, venues, files }: { papers: PaperOption[]; venues: VenueOption[]; files: FileOption[] }) {
   const [paperId, setPaperId] = useState(papers[0]?.id ?? "");
   const [submissionType, setSubmissionType] = useState("FORUM");
   const filteredVenues = useMemo(() => {
@@ -31,6 +43,7 @@ export function SubmissionForm({ papers, venues }: { papers: PaperOption[]; venu
   const statusOptions = submissionType === "JOURNAL" ? journalSubmissionStatusLabels : forumSubmissionStatusLabels;
   const selectedVenue = filteredVenues[0];
   const isJournal = submissionType === "JOURNAL";
+  const paperFiles = files.filter((file) => !file.relatedPaperId || file.relatedPaperId === paperId);
 
   return (
     <form action={createSubmission} className="panel grid gap-5 p-5">
@@ -127,6 +140,20 @@ export function SubmissionForm({ papers, venues }: { papers: PaperOption[]; venu
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label><span className="label">该论坛 / 期刊要求的格式</span><textarea name="formatRequirementText" rows={4} className="field" placeholder="记录官网或通知里的格式要求、匿名要求、标题摘要关键词要求等" /></label>
           <label><span className="label">文件命名规则 / 格式备注</span><textarea name="fileNamingRule" rows={4} className="field" placeholder="例如 论文题目-匿名版.docx；或记录已经如何处理格式" /></label>
+        </div>
+        <div className="mt-4">
+          <label>
+            <span className="label">绑定投稿文件版本</span>
+            <select name="submittedFileRecordId" className="field" defaultValue="">
+              <option value="">暂不绑定</option>
+              {paperFiles.map((file) => (
+                <option key={file.id} value={file.id}>
+                  {file.fileName} · {fileTypeLabels[file.fileType] ?? file.fileType} · V{file.versionNumber}{file.versionLabel ? ` · ${file.versionLabel}` : ""} · {formatFileSize(file.fileSize)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="mt-2 text-xs leading-5 text-slate-500">绑定后，投稿记录会引用这个文件版本；替换文件时会生成新版本，不会覆盖历史版本。</p>
         </div>
       </section>
 

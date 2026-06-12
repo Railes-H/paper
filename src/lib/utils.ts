@@ -20,6 +20,13 @@ export function toDateInputValue(date?: Date | string | null) {
   return d.toISOString().slice(0, 10);
 }
 
+export function formatFileSize(bytes?: number | null) {
+  if (!bytes) return "-";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 export function parseDate(value: FormDataEntryValue | null) {
   if (!value || typeof value !== "string") return null;
   return value ? new Date(`${value}T00:00:00`) : null;

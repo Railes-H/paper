@@ -180,6 +180,7 @@ CREATE TABLE "Submission" (
   "resultDate" DATETIME,
   "submissionSystemUrl" TEXT,
   "submittedFileUrl" TEXT,
+  "submittedFileRecordId" TEXT,
   "receiptUrl" TEXT,
   "submissionMaterials" TEXT,
   "formatChecked" BOOLEAN NOT NULL DEFAULT 0,
@@ -207,7 +208,8 @@ CREATE TABLE "Submission" (
   "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "Submission_paperId_fkey" FOREIGN KEY ("paperId") REFERENCES "Paper" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT "Submission_paperVersionId_fkey" FOREIGN KEY ("paperVersionId") REFERENCES "PaperVersion" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT "Submission_venueId_fkey" FOREIGN KEY ("venueId") REFERENCES "Venue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+  CONSTRAINT "Submission_venueId_fkey" FOREIGN KEY ("venueId") REFERENCES "Venue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT "Submission_submittedFileRecordId_fkey" FOREIGN KEY ("submittedFileRecordId") REFERENCES "FileRecord" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE "Reminder" (
@@ -228,17 +230,27 @@ CREATE TABLE "FileRecord" (
   "fileName" TEXT NOT NULL,
   "fileType" TEXT NOT NULL,
   "fileUrl" TEXT NOT NULL,
+  "downloadUrl" TEXT,
+  "storageProvider" TEXT NOT NULL DEFAULT 'EXTERNAL',
+  "storagePath" TEXT,
+  "mimeType" TEXT,
+  "fileSize" INTEGER,
   "relatedPaperId" TEXT,
   "relatedPaperVersionId" TEXT,
   "relatedSubmissionId" TEXT,
+  "sourceFileId" TEXT,
+  "versionGroupId" TEXT,
+  "versionNumber" INTEGER NOT NULL DEFAULT 1,
   "versionLabel" TEXT,
   "uploadDate" DATETIME,
+  "isCurrent" BOOLEAN NOT NULL DEFAULT 1,
   "notes" TEXT,
   "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "FileRecord_relatedPaperId_fkey" FOREIGN KEY ("relatedPaperId") REFERENCES "Paper" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT "FileRecord_relatedPaperVersionId_fkey" FOREIGN KEY ("relatedPaperVersionId") REFERENCES "PaperVersion" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT "FileRecord_relatedSubmissionId_fkey" FOREIGN KEY ("relatedSubmissionId") REFERENCES "Submission" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+  CONSTRAINT "FileRecord_relatedSubmissionId_fkey" FOREIGN KEY ("relatedSubmissionId") REFERENCES "Submission" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT "FileRecord_sourceFileId_fkey" FOREIGN KEY ("sourceFileId") REFERENCES "FileRecord" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE "Suggestion" (

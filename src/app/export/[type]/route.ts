@@ -3,7 +3,7 @@ import { csvResponse, dateOnly } from "@/lib/csv";
 import { fileTypeLabels, rejectReasonCategoryLabels, venueTypeLabels } from "@/lib/labels";
 import { displayResearchAreas } from "@/lib/paper-fields";
 import { prisma } from "@/lib/prisma";
-import { reviewDays } from "@/lib/utils";
+import { formatFileSize, reviewDays } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +47,7 @@ export async function GET(_request: NextRequest, { params }: { params: { type: s
   }
   if (type === "files") {
     const rows = await prisma.fileRecord.findMany({ include: { relatedPaper: true, relatedPaperVersion: true, relatedSubmission: { include: { paper: true, venue: true } } } });
-    return csvResponse("files.csv", rows.map((item) => ({ 文件名: item.fileName, 文件类型: fileTypeLabels[item.fileType], 文件链接: item.fileUrl, 版本说明: item.versionLabel, 关联论文: item.relatedPaper?.title, 关联投稿格式: item.relatedPaperVersion?.versionName, 关联投稿记录: item.relatedSubmission ? `${item.relatedSubmission.paper.title} - ${item.relatedSubmission.venue.name}` : "" })));
+    return csvResponse("files.csv", rows.map((item) => ({ 文件名: item.fileName, 文件类型: fileTypeLabels[item.fileType], 文件大小: formatFileSize(item.fileSize), MIME类型: item.mimeType, 存储服务: item.storageProvider, 存储路径: item.storagePath, 文件链接: item.fileUrl, 下载链接: item.downloadUrl, 版本号: `V${item.versionNumber}`, 版本说明: item.versionLabel, 是否当前版本: item.isCurrent ? "是" : "否", 上传时间: dateOnly(item.uploadDate ?? item.createdAt), 关联论文: item.relatedPaper?.title, 关联投稿格式: item.relatedPaperVersion?.versionName, 关联投稿记录: item.relatedSubmission ? `${item.relatedSubmission.paper.title} - ${item.relatedSubmission.venue.name}` : "" })));
   }
   if (type === "suggestions") {
     const rows = await prisma.suggestion.findMany({ include: { relatedPaper: true, relatedSubmission: { include: { venue: true } }, relatedVenue: true } });

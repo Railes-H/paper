@@ -6,7 +6,7 @@ import { useMemo, useRef, useState } from "react";
 import { createPaper, updatePaper } from "@/app/actions";
 import { enumOptions, fileTypeLabels, paperStatusLabels } from "@/lib/labels";
 import { parseResearchAreas, stringifyResearchAreas } from "@/lib/paper-fields";
-import { toDateInputValue } from "@/lib/utils";
+import { formatFileSize, toDateInputValue } from "@/lib/utils";
 
 type RecognitionResult = {
   title: string;
@@ -16,6 +16,11 @@ type RecognitionResult = {
   fileName: string;
   fileType: string;
   fileUrl: string;
+  downloadUrl?: string;
+  storageProvider?: string;
+  storagePath?: string;
+  mimeType?: string;
+  fileSize?: number;
   warning?: string;
 };
 
@@ -102,6 +107,11 @@ export function PaperForm({
       <input type="hidden" name="uploadedFileName" value={recognition?.fileName ?? ""} />
       <input type="hidden" name="uploadedFileType" value={recognition?.fileType ?? ""} />
       <input type="hidden" name="uploadedFileUrl" value={recognition?.fileUrl ?? ""} />
+      <input type="hidden" name="uploadedDownloadUrl" value={recognition?.downloadUrl ?? ""} />
+      <input type="hidden" name="uploadedStorageProvider" value={recognition?.storageProvider ?? ""} />
+      <input type="hidden" name="uploadedStoragePath" value={recognition?.storagePath ?? ""} />
+      <input type="hidden" name="uploadedMimeType" value={recognition?.mimeType ?? ""} />
+      <input type="hidden" name="uploadedFileSize" value={recognition?.fileSize ?? ""} />
 
       {!paper ? (
         <section className="grid gap-4 rounded-md border-2 border-line bg-yellow-50/70 p-4">
@@ -123,9 +133,9 @@ export function PaperForm({
               {isRecognizing ? "自动识别中..." : recognition ? "重新上传" : "上传完整版论文"}
               <input
                 type="file"
-                accept=".docx,.pdf,.txt,.md"
                 className="hidden"
                 disabled={isRecognizing}
+                accept=".pdf,.doc,.docx"
                 onChange={(event) => recognizeFile(event.target.files?.[0])}
               />
             </label>
@@ -147,6 +157,8 @@ export function PaperForm({
                 <Preview label="标题" value={recognition.title || "未识别，已使用文件名"} />
                 <Preview label="文件名" value={recognition.fileName} />
                 <Preview label="文件类型" value={fileTypeLabels[recognition.fileType] ?? recognition.fileType} />
+                <Preview label="文件大小" value={formatFileSize(recognition.fileSize)} />
+                <Preview label="存储位置" value={recognition.storageProvider ?? "未上传"} />
                 <Preview label="关键词" value={recognition.masterKeywords || "未识别，请补充"} />
                 <Preview label="估算字数" value={String(recognition.masterWordCount || 0)} />
                 <Preview label="文件链接" value={recognition.fileUrl} />

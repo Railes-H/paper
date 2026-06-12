@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import {
   enumOptions,
+  fileTypeLabels,
   majorRevisionLabels,
   rejectReasonCategoryLabels,
   rejectionSeverityLabels,
@@ -15,7 +16,7 @@ import {
 } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
 import { buildSuggestions } from "@/lib/suggestions";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatFileSize } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,8 @@ export default async function SubmissionDetailPage({ params }: { params: { id: s
       paper: { include: { versions: true } },
       paperVersion: true,
       venue: { include: { evaluation: true, conferenceInfo: true, journalInfo: true } },
-      files: true
+      files: true,
+      submittedFileRecord: true
     }
   });
   if (!submission) notFound();
@@ -57,7 +59,7 @@ export default async function SubmissionDetailPage({ params }: { params: { id: s
           <Info label="结果日期" value={formatDate(submission.resultDate)} />
           <Info label="下一步计划" value={submission.nextAction ?? "-"} />
           <Info label="格式文档" value={submission.paperVersion.fileUrl ?? "-"} />
-          <Info label="提交文件" value={submission.submittedFileUrl ?? "-"} />
+          <Info label="提交文件" value={submission.submittedFileRecord?.fileName ?? submission.submittedFileUrl ?? "-"} />
         </div>
         {submission.paperVersion.formatRequirementText ? <p className="mt-5 rounded-md bg-slate-50 p-4 text-sm leading-7 text-slate-600">{submission.paperVersion.formatRequirementText}</p> : null}
       </section>
@@ -99,11 +101,36 @@ export default async function SubmissionDetailPage({ params }: { params: { id: s
       <section className="panel p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-ink">相关文件</h2>
-          <Link className="btn-secondary" href="/files">文件管理</Link>
+          <Link className="btn-secondary" href={`/files/new?submissionId=${submission.id}`}>新增文件</Link>
         </div>
-        <div className="grid gap-2">
+        {submission.submittedFileRecord ? (
+          <div className="mb-3 rounded-lg border-2 border-green-200 bg-green-50 p-3">
+            <div className="text-sm font-black text-green-800">本次投稿绑定文件</div>
+            <div className="mt-1 text-sm text-slate-700">{submission.submittedFileRecord.fileName} · V{submission.submittedFileRecord.versionNumber} · {formatFileSize(submission.submittedFileRecord.fileSize)}</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a className="btn-secondary h-8" href={submission.submittedFileRecord.fileUrl} target="_blank" rel="noreferrer">查看</a>
+              <a className="btn-secondary h-8" href={submission.submittedFileRecord.downloadUrl ?? submission.submittedFileRecord.fileUrl}>下载</a>
+            </div>
+          </div>
+        ) : null}
+        <div className="grid gap-3 md:grid-cols-2">
           {submission.files.length ? submission.files.map((file) => (
-            <a key={file.id} href={file.fileUrl} className="rounded-md bg-slate-50 px-3 py-2 text-sm text-blue-700">{file.fileName} · {file.versionLabel ?? file.fileType}</a>
+            <div key={file.id} className="rounded-lg border border-line bg-slate-50 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-ink">{file.fileName}</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    {fileTypeLabels[file.fileType] ?? file.fileType} · V{file.versionNumber}{file.versionLabel ? ` · ${file.versionLabel}` : ""} · {formatFileSize(file.fileSize)} · {formatDate(file.uploadDate ?? file.createdAt)}
+                  </div>
+                </div>
+                <StatusBadge tone={file.isCurrent ? "green" : "slate"}>{file.isCurrent ? "当前" : "历史"}</StatusBadge>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a className="btn-secondary h-8" href={file.fileUrl} target="_blank" rel="noreferrer">查看</a>
+                <a className="btn-secondary h-8" href={file.downloadUrl ?? file.fileUrl}>下载</a>
+                <Link className="btn-secondary h-8" href={`/files/${file.id}/edit`}>替换</Link>
+              </div>
+            </div>
           )) : <p className="text-sm text-slate-500">暂无关联文件。</p>}
         </div>
       </section>

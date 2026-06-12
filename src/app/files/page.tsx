@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { fileTypeLabels } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatFileSize } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -33,18 +33,27 @@ export default async function FilesPage({ searchParams }: { searchParams?: { q?:
       </form>
       {files.length === 0 ? <EmptyState title="还没有文件记录" description="先新增文件链接或本地路径，并关联到论文、投稿格式或投稿记录。" href="/files/new" action="新增文件" /> : (
         <div className="panel overflow-hidden">
-          <table className="w-full min-w-[1080px]">
-            <thead><tr><th className="table-th">文件名</th><th className="table-th">类型</th><th className="table-th">版本说明</th><th className="table-th">关联论文</th><th className="table-th">关联投稿格式</th><th className="table-th">关联投稿</th><th className="table-th">日期</th><th className="table-th">操作</th></tr></thead>
+          <table className="w-full min-w-[1320px]">
+            <thead><tr><th className="table-th">文件名</th><th className="table-th">类型</th><th className="table-th">大小</th><th className="table-th">版本</th><th className="table-th">状态</th><th className="table-th">关联论文</th><th className="table-th">关联投稿格式</th><th className="table-th">关联投稿</th><th className="table-th">上传时间</th><th className="table-th">操作</th></tr></thead>
             <tbody>{files.map((file) => (
               <tr key={file.id}>
                 <td className="table-td font-medium text-ink"><a href={file.fileUrl} className="text-blue-700 hover:underline">{file.fileName}</a></td>
                 <td className="table-td"><StatusBadge tone="purple">{fileTypeLabels[file.fileType] ?? file.fileType}</StatusBadge></td>
-                <td className="table-td">{file.versionLabel ?? "-"}</td>
+                <td className="table-td">{formatFileSize(file.fileSize)}</td>
+                <td className="table-td">V{file.versionNumber}{file.versionLabel ? ` · ${file.versionLabel}` : ""}</td>
+                <td className="table-td"><StatusBadge tone={file.isCurrent ? "green" : "slate"}>{file.isCurrent ? "当前版本" : "历史版本"}</StatusBadge></td>
                 <td className="table-td">{file.relatedPaper?.title ?? "-"}</td>
                 <td className="table-td">{file.relatedPaperVersion?.versionName ?? "-"}</td>
                 <td className="table-td">{file.relatedSubmission ? `${file.relatedSubmission.paper.title} - ${file.relatedSubmission.venue.name}` : "-"}</td>
                 <td className="table-td">{formatDate(file.uploadDate ?? file.createdAt)}</td>
-                <td className="table-td"><div className="flex gap-2"><Link className="btn-secondary h-8" href={`/files/${file.id}/edit`}>编辑</Link><form action={deleteFileRecord.bind(null, file.id)}><button className="btn-danger h-8">删除</button></form></div></td>
+                <td className="table-td">
+                  <div className="flex flex-wrap gap-2">
+                    <a className="btn-secondary h-8" href={file.fileUrl} target="_blank" rel="noreferrer">查看</a>
+                    <a className="btn-secondary h-8" href={file.downloadUrl ?? file.fileUrl}>下载</a>
+                    <Link className="btn-secondary h-8" href={`/files/${file.id}/edit`}>替换/编辑</Link>
+                    <form action={deleteFileRecord.bind(null, file.id)}><button className="btn-danger h-8">删除</button></form>
+                  </div>
+                </td>
               </tr>
             ))}</tbody>
           </table>

@@ -2,6 +2,7 @@
 const nextConfig = {
   experimental: {
     serverActions: true,
+    serverComponentsExternalPackages: ["@vercel/blob"],
     outputFileTracingIncludes: {
       "/": ["./prisma/init.sql"]
     }

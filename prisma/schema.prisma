@@ -183,6 +183,7 @@ model Submission {
   resultDate            DateTime?
   submissionSystemUrl   String?
   submittedFileUrl      String?
+  submittedFileRecordId String?
   receiptUrl            String?
   submissionMaterials   String?
   formatChecked         Boolean          @default(false)
@@ -211,6 +212,7 @@ model Submission {
   venue                 Venue            @relation(fields: [venueId], references: [id], onDelete: Restrict)
   reminders             Reminder[]
   files                 FileRecord[]
+  submittedFileRecord   FileRecord?       @relation("SubmittedFileRecord", fields: [submittedFileRecordId], references: [id], onDelete: SetNull)
   suggestions           Suggestion[]
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
@@ -234,15 +236,27 @@ model FileRecord {
   fileName              String
   fileType              String
   fileUrl               String
+  downloadUrl           String?
+  storageProvider       String        @default("EXTERNAL")
+  storagePath           String?
+  mimeType              String?
+  fileSize              Int?
   relatedPaperId        String?
   relatedPaperVersionId String?
   relatedSubmissionId   String?
+  sourceFileId          String?
+  versionGroupId        String?
+  versionNumber         Int           @default(1)
   versionLabel          String?
   uploadDate            DateTime?
+  isCurrent             Boolean       @default(true)
   notes                 String?
   relatedPaper          Paper?        @relation(fields: [relatedPaperId], references: [id], onDelete: SetNull)
   relatedPaperVersion   PaperVersion? @relation(fields: [relatedPaperVersionId], references: [id], onDelete: SetNull)
   relatedSubmission     Submission?   @relation(fields: [relatedSubmissionId], references: [id], onDelete: SetNull)
+  sourceFile            FileRecord?   @relation("FileVersionHistory", fields: [sourceFileId], references: [id], onDelete: SetNull)
+  replacementVersions   FileRecord[]  @relation("FileVersionHistory")
+  boundSubmissions      Submission[]  @relation("SubmittedFileRecord")
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 }
