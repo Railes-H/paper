@@ -9,6 +9,7 @@ import { parseResearchAreas, stringifyResearchAreas } from "@/lib/paper-fields";
 import { formatFileSize, toDateInputValue } from "@/lib/utils";
 
 type RecognitionResult = {
+  fileRecordId?: string;
   title: string;
   masterAbstract: string;
   masterKeywords: string;
@@ -104,6 +105,7 @@ export function PaperForm({
   return (
     <form action={action} className="panel grid gap-5 p-5">
       <input type="hidden" name="researchArea" value={stringifyResearchAreas(selectedAreas)} />
+      <input type="hidden" name="uploadedFileRecordId" value={recognition?.fileRecordId ?? ""} />
       <input type="hidden" name="uploadedFileName" value={recognition?.fileName ?? ""} />
       <input type="hidden" name="uploadedFileType" value={recognition?.fileType ?? ""} />
       <input type="hidden" name="uploadedFileUrl" value={recognition?.fileUrl ?? ""} />
@@ -125,7 +127,7 @@ export function PaperForm({
                   <span className="label mb-0">1 上传与识别</span>
                   <StatusPill active={isRecognizing} done={hasRecognition} />
                 </div>
-                <p className="mt-1 text-sm leading-6 text-slate-700">上传完整版文件后，系统会先填入可编辑草稿，再由你确认保存。</p>
+                <p className="mt-1 text-sm leading-6 text-slate-700">上传完整版文件后，系统会先保存到文件管理并填入可编辑草稿，再由你确认绑定论文。</p>
               </div>
             </div>
             <label className="btn-secondary cursor-pointer">
@@ -159,6 +161,7 @@ export function PaperForm({
                 <Preview label="文件类型" value={fileTypeLabels[recognition.fileType] ?? recognition.fileType} />
                 <Preview label="文件大小" value={formatFileSize(recognition.fileSize)} />
                 <Preview label="存储位置" value={recognition.storageProvider ?? "未上传"} />
+                <Preview label="文件记录" value={recognition.fileRecordId ? "已保存到文件管理" : "待保存"} />
                 <Preview label="关键词" value={recognition.masterKeywords || "未识别，请补充"} />
                 <Preview label="估算字数" value={String(recognition.masterWordCount || 0)} />
                 <Preview label="文件链接" value={recognition.fileUrl} />
@@ -305,7 +308,7 @@ export function PaperForm({
       <div className="flex flex-col gap-3 rounded-md border border-orange-100 bg-yellow-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-2 text-sm text-slate-700">
           {selectedAreas.length > 0 ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-700" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-700" />}
-          <span>{recognition ? "保存后会创建完整版论文，并自动生成对应文件记录。" : "保存后会创建完整版论文；如果已上传文件，会同步生成文件记录。"}</span>
+          <span>{recognition ? "保存后会创建完整版论文，并把已上传文件绑定到这篇论文。" : "保存后会创建完整版论文；如果已上传文件，会同步生成文件记录。"}</span>
         </div>
         <button className="btn-primary" type="submit" disabled={selectedAreas.length === 0}>
           保存论文

@@ -26,6 +26,7 @@ import {
 } from "@/lib/utils";
 
 export async function createPaper(formData: FormData) {
+  const uploadedFileRecordId = parseOptionalString(formData.get("uploadedFileRecordId"));
   const uploadedFileUrl = parseOptionalString(formData.get("uploadedFileUrl"));
   const uploadedFileName = parseOptionalString(formData.get("uploadedFileName"));
   const uploadedFileType = parseOptionalString(formData.get("uploadedFileType"));
@@ -50,7 +51,16 @@ export async function createPaper(formData: FormData) {
       notes: parseOptionalString(formData.get("notes"))
     }
   });
-  if (uploadedFileUrl && uploadedFileName && uploadedFileType) {
+  if (uploadedFileRecordId) {
+    await prisma.fileRecord.updateMany({
+      where: { id: uploadedFileRecordId },
+      data: {
+        relatedPaperId: paper.id,
+        versionLabel: currentVersion,
+        notes: "自动识别生成的完整版论文文件"
+      }
+    });
+  } else if (uploadedFileUrl && uploadedFileName && uploadedFileType) {
     await prisma.fileRecord.create({
       data: {
         fileName: uploadedFileName,

@@ -146,6 +146,7 @@ file:/tmp/papertrack.db
 - 线上文件本体使用 Vercel Blob 持久化保存，数据库只保存文件信息、Blob 路径、查看 URL 和下载 URL。
 - Vercel Blob 使用新版 OIDC 默认认证，代码使用 SDK 默认认证方式，不会在 SDK 方法里手动传 token。
 - 上传接口使用 `put(file.name, file, { access: "private", addRandomSuffix: true })`。
+- 新增论文页上传文件后会立即创建一条未关联的文件记录；即使刷新新增论文页面，也可以在 `/files` 找回该文件。保存论文时，系统会把这条文件记录绑定到新论文。
 - 本地开发如果没有拉取 Vercel 环境变量，会回退到 `public/uploads`，仅用于本地调试。
 - 如果需要长期稳定保存业务数据，建议改用 PostgreSQL、Neon、Supabase 或 Vercel Postgres。
 
