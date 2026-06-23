@@ -70,7 +70,7 @@ export default async function SubmissionsPage({ searchParams }: { searchParams?:
         <button className="btn-secondary">筛选</button>
       </form>
       {submissions.length === 0 ? (
-        <EmptyState title="还没有投稿记录" description="新增投稿记录前，需要先有论文和投稿对象。" href="/submissions/new" action="新增投稿记录" />
+        <EmptyState title="还没有投稿记录" description="先准备一篇完整版论文，投稿对象可在新增投稿记录时直接填写。" href="/submissions/new" action="新增投稿记录" />
       ) : (
         <div className="grid gap-6">
           {groupedSubmissions.map(([paperTitle, paperSubmissions]) => (

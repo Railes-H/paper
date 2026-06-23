@@ -231,7 +231,7 @@ export async function deleteVenue(id: string) {
 
 export async function createSubmission(formData: FormData) {
   const paperId = parseString(formData.get("paperId"));
-  const venueId = parseString(formData.get("venueId"));
+  const venueName = parseString(formData.get("venueName"));
   const submissionType = formData.get("submissionType") as VenueType;
   const isJournal = submissionType === "JOURNAL";
   const submittedFileUrl = parseOptionalString(formData.get("submittedFileUrl"));
@@ -240,8 +240,19 @@ export async function createSubmission(formData: FormData) {
   const selectedSubmittedFile = submittedFileRecordId
     ? await prisma.fileRecord.findUnique({ where: { id: submittedFileRecordId }, select: { fileUrl: true } })
     : null;
-  const venue = await prisma.venue.findUnique({ where: { id: venueId }, select: { name: true } });
-  const formatLabel = parseOptionalString(formData.get("formatLabel")) ?? `${venue?.name ?? "投稿对象"}格式`;
+  const existingVenue = await prisma.venue.findFirst({
+    where: { name: venueName, type: submissionType },
+    select: { id: true }
+  });
+  const venue = existingVenue ?? await prisma.venue.create({
+    data: {
+      name: venueName,
+      type: submissionType
+    },
+    select: { id: true }
+  });
+  const venueId = venue.id;
+  const formatLabel = parseString(formData.get("formatLabel"));
   const paperVersion = await prisma.paperVersion.create({
     data: {
       paperId,
@@ -301,6 +312,9 @@ export async function createSubmission(formData: FormData) {
     }
   });
   revalidatePath("/submissions");
+  revalidatePath("/venues");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
   redirect("/submissions");
 }
 

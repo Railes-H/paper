@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createSubmission } from "@/app/actions";
 import {
   fileTypeLabels,
@@ -17,12 +17,6 @@ type PaperOption = {
   title: string;
 };
 
-type VenueOption = {
-  id: string;
-  name: string;
-  type: string;
-};
-
 type FileOption = {
   id: string;
   fileName: string;
@@ -33,15 +27,10 @@ type FileOption = {
   relatedPaperId: string | null;
 };
 
-export function SubmissionForm({ papers, venues, files }: { papers: PaperOption[]; venues: VenueOption[]; files: FileOption[] }) {
+export function SubmissionForm({ papers, files }: { papers: PaperOption[]; files: FileOption[] }) {
   const [paperId, setPaperId] = useState(papers[0]?.id ?? "");
   const [submissionType, setSubmissionType] = useState("FORUM");
-  const filteredVenues = useMemo(() => {
-    const matched = venues.filter((venue) => venue.type === submissionType);
-    return matched.length ? matched : venues;
-  }, [venues, submissionType]);
   const statusOptions = submissionType === "JOURNAL" ? journalSubmissionStatusLabels : forumSubmissionStatusLabels;
-  const selectedVenue = filteredVenues[0];
   const isJournal = submissionType === "JOURNAL";
   const paperFiles = files.filter((file) => !file.relatedPaperId || file.relatedPaperId === paperId);
 
@@ -68,6 +57,17 @@ export function SubmissionForm({ papers, venues, files }: { papers: PaperOption[
         </p>
       </div>
 
+      <section className="rounded-lg border border-line bg-slate-50 p-4">
+        <h2 className="mb-1 text-sm font-semibold text-ink">投稿对象与基本日期</h2>
+        <p className="mb-4 text-xs leading-5 text-slate-500">无需提前新增投稿对象。保存时系统会按名称和类型自动匹配，找不到时创建最简投稿对象。</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label><span className="label">投稿对象名称</span><input name="venueName" required className="field" placeholder="例如 中国传播学论坛、《新闻与传播研究》" /></label>
+          <label><span className="label">格式名称</span><input name="formatLabel" required className="field" placeholder="例如 匿名全文格式、期刊投稿格式" /></label>
+          <label><span className="label">截稿日期</span><input name="deadline" type="date" className="field" /></label>
+          <label><span className="label">录稿日期</span><input name="acceptDate" type="date" className="field" /></label>
+        </div>
+      </section>
+
       <div className="grid gap-4 md:grid-cols-3">
         <label>
           <span className="label">投稿论文</span>
@@ -79,18 +79,7 @@ export function SubmissionForm({ papers, venues, files }: { papers: PaperOption[
             ))}
           </select>
         </label>
-        <label>
-          <span className="label">投稿对象</span>
-          <select name="venueId" required className="field" key={submissionType} defaultValue={selectedVenue?.id ?? ""}>
-            {filteredVenues.map((venue) => (
-              <option key={venue.id} value={venue.id}>
-                {venue.name}
-              </option>
-            ))}
-          </select>
-        </label>
         <label><span className="label">投稿日期</span><input name="submissionDate" type="date" className="field" /></label>
-        <label><span className="label">截稿日期</span><input name="deadline" type="date" className="field" /></label>
         <label>
           <span className="label">当前状态</span>
           <select name="status" key={submissionType} defaultValue="PREPARING" className="field">
@@ -123,14 +112,12 @@ export function SubmissionForm({ papers, venues, files }: { papers: PaperOption[
             <label><span className="label">返修提交日期</span><input name="revisionSubmittedDate" type="date" className="field" /></label>
           </>
         ) : null}
-        <label><span className="label">录用日期</span><input name="acceptDate" type="date" className="field" /></label>
         <label><span className="label">拒稿日期</span><input name="rejectDate" type="date" className="field" /></label>
       </div>
 
       <section className="rounded-lg border border-line bg-slate-50 p-4">
         <h2 className="mb-3 text-sm font-semibold text-ink">投稿格式与文档</h2>
         <div className="grid gap-4 md:grid-cols-3">
-          <label><span className="label">格式名称</span><input name="formatLabel" className="field" placeholder="例如 匿名全文格式、期刊投稿格式" /></label>
           <label><span className="label">格式文档链接</span><input name="formatDocumentUrl" type="url" className="field" placeholder="保存对应格式稿件或附件链接" /></label>
           <label><span className="label">字数要求</span><input name="wordLimit" type="number" className="field" /></label>
           <label><span className="label">实际字数</span><input name="actualWordCount" type="number" className="field" /></label>

@@ -6,9 +6,8 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function NewSubmissionPage() {
-  const [papers, venues, files] = await Promise.all([
+  const [papers, files] = await Promise.all([
     prisma.paper.findMany({ orderBy: { updatedAt: "desc" } }),
-    prisma.venue.findMany({ orderBy: { updatedAt: "desc" } }),
     prisma.fileRecord.findMany({
       where: { isCurrent: true },
       include: { relatedPaper: true },
@@ -16,15 +15,15 @@ export default async function NewSubmissionPage() {
     })
   ]);
 
-  if (papers.length === 0 || venues.length === 0) {
+  if (papers.length === 0) {
     return (
       <>
         <PageHeader title="新增投稿记录" backHref="/submissions" />
         <EmptyState
           title="还不能创建投稿记录"
-          description="投稿记录必须关联母版论文和投稿对象。请先添加至少一篇论文和一个投稿对象。"
-          href={papers.length === 0 ? "/papers/new" : "/venues/new"}
-          action={papers.length === 0 ? "新增论文" : "新增投稿对象"}
+          description="投稿记录必须关联一篇完整版论文。投稿对象可以在新增投稿记录时直接填写。"
+          href="/papers/new"
+          action="新增论文"
         />
       </>
     );
@@ -32,13 +31,12 @@ export default async function NewSubmissionPage() {
 
   return (
     <>
-      <PageHeader title="新增投稿记录" description="记录论文投向哪个论坛或期刊、对方要求什么格式，以及保存对应格式文档。" backHref="/submissions" />
+      <PageHeader title="新增投稿记录" description="直接填写投稿对象、格式和关键日期，系统会自动完成对象与格式版本的创建。" backHref="/submissions" />
       <SubmissionForm
         papers={papers.map((paper) => ({
           id: paper.id,
           title: paper.title
         }))}
-        venues={venues.map((venue) => ({ id: venue.id, name: venue.name, type: venue.type }))}
         files={files.map((file) => ({
           id: file.id,
           fileName: file.fileName,

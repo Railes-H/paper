@@ -6,7 +6,6 @@ import {
   Download,
   FileText,
   Home,
-  Library,
   Send,
   Settings2
 } from "lucide-react";
@@ -14,7 +13,6 @@ import {
 const navItems = [
   { href: "/dashboard", label: "首页", icon: Home },
   { href: "/papers", label: "完整版论文库", icon: FileText },
-  { href: "/venues", label: "投稿对象", icon: Library },
   { href: "/submissions", label: "投稿记录", icon: Send },
   { href: "/suggestions", label: "下一步建议", icon: CalendarClock },
   { href: "/files", label: "文件管理", icon: FileText },
