@@ -53,6 +53,11 @@ export function inferPaperFileType(fileName: string, fallback = "MASTER_WORD") {
   return fallback;
 }
 
+export function inferSubmissionFileType(fileName: string) {
+  const ext = path.extname(fileName).toLowerCase();
+  return ext === ".pdf" ? "SUBMISSION_PDF" : "SUBMISSION_WORD";
+}
+
 export function sanitizeFileName(fileName: string) {
   const ext = path.extname(fileName);
   const base = path.basename(fileName, ext);

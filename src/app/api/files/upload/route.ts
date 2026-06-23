@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getUploadValidation,
   inferPaperFileType,
+  inferSubmissionFileType,
   storeUploadedFile
 } from "@/lib/file-storage";
 
@@ -10,6 +11,7 @@ export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   const data = await request.formData();
   const file = data.get("file");
+  const usage = data.get("usage");
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "请先选择要上传的文件。" }, { status: 400 });
   }
@@ -26,7 +28,7 @@ export async function POST(request: NextRequest) {
     const storedFile = await storeUploadedFile(uploadedFile, bytes);
     return NextResponse.json({
       ...storedFile,
-      fileType: inferPaperFileType(uploadedFile.name),
+      fileType: usage === "submission" ? inferSubmissionFileType(uploadedFile.name) : inferPaperFileType(uploadedFile.name),
       uploadedAt: new Date().toISOString()
     });
   } catch (error) {

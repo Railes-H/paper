@@ -25,6 +25,34 @@ import {
   parseString
 } from "@/lib/utils";
 
+type SubmissionUpload = {
+  fileName: string;
+  fileType: string;
+  fileUrl: string;
+  downloadUrl?: string;
+  storageProvider?: string;
+  storagePath?: string;
+  mimeType?: string;
+  fileSize?: number;
+  uploadedAt?: string;
+};
+
+function parseSubmissionUploads(value: FormDataEntryValue | null): SubmissionUpload[] {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is SubmissionUpload =>
+      item &&
+      typeof item.fileName === "string" &&
+      typeof item.fileType === "string" &&
+      typeof item.fileUrl === "string"
+    );
+  } catch {
+    return [];
+  }
+}
+
 export async function createPaper(formData: FormData) {
   const uploadedFileRecordId = parseOptionalString(formData.get("uploadedFileRecordId"));
   const uploadedFileUrl = parseOptionalString(formData.get("uploadedFileUrl"));
@@ -234,12 +262,8 @@ export async function createSubmission(formData: FormData) {
   const venueName = parseString(formData.get("venueName"));
   const submissionType = formData.get("submissionType") as VenueType;
   const isJournal = submissionType === "JOURNAL";
-  const submittedFileUrl = parseOptionalString(formData.get("submittedFileUrl"));
-  const submittedFileRecordId = parseOptionalString(formData.get("submittedFileRecordId"));
-  const formatDocumentUrl = parseOptionalString(formData.get("formatDocumentUrl"));
-  const selectedSubmittedFile = submittedFileRecordId
-    ? await prisma.fileRecord.findUnique({ where: { id: submittedFileRecordId }, select: { fileUrl: true } })
-    : null;
+  const uploadedFiles = parseSubmissionUploads(formData.get("uploadedSubmissionFiles"));
+  const primaryFile = uploadedFiles[0];
   const existingVenue = await prisma.venue.findFirst({
     where: { name: venueName, type: submissionType },
     select: { id: true }
@@ -260,19 +284,11 @@ export async function createSubmission(formData: FormData) {
       targetVenueId: venueId,
       versionName: formatLabel,
       versionType: submissionType,
-      fileUrl: selectedSubmittedFile?.fileUrl ?? formatDocumentUrl ?? submittedFileUrl,
-      wordLimit: parseIntField(formData.get("wordLimit")),
-      actualWordCount: parseIntField(formData.get("actualWordCount")),
-      referenceStyle: parseOptionalString(formData.get("referenceStyle")),
-      citationStyle: parseOptionalString(formData.get("citationStyle")),
-      fileNamingRule: parseOptionalString(formData.get("fileNamingRule")),
-      submissionMaterials: parseOptionalString(formData.get("submissionMaterials")),
-      formatRequirementText: parseOptionalString(formData.get("formatRequirementText")),
-      formatNotes: parseOptionalString(formData.get("fileNamingRule")),
+      fileUrl: primaryFile?.fileUrl,
       reuseLevel: "MEDIUM"
     }
   });
-  await prisma.submission.create({
+  const submission = await prisma.submission.create({
     data: {
       paperId,
       paperVersionId: paperVersion.id,
@@ -284,8 +300,7 @@ export async function createSubmission(formData: FormData) {
       result: formData.get("result") as SubmissionResult,
       resultDate: parseDate(formData.get("resultDate")),
       submissionSystemUrl: parseOptionalString(formData.get("submissionSystemUrl")),
-      submittedFileUrl: selectedSubmittedFile?.fileUrl ?? submittedFileUrl ?? formatDocumentUrl,
-      submittedFileRecordId,
+      submittedFileUrl: primaryFile?.fileUrl,
       receiptUrl: parseOptionalString(formData.get("receiptUrl")),
       submissionMaterials: parseOptionalString(formData.get("submissionMaterials")),
       formatChecked: parseBoolean(formData.get("formatChecked")),
@@ -311,6 +326,33 @@ export async function createSubmission(formData: FormData) {
       nextAction: parseOptionalString(formData.get("nextAction"))
     }
   });
+  if (uploadedFiles.length > 0) {
+    const fileRecords = uploadedFiles.map((file) => ({
+      id: randomUUID(),
+      fileName: file.fileName,
+      fileType: file.fileType === "SUBMISSION_PDF" ? "SUBMISSION_PDF" : "SUBMISSION_WORD",
+      fileUrl: file.fileUrl,
+      downloadUrl: file.downloadUrl,
+      storageProvider: file.storageProvider ?? "EXTERNAL",
+      storagePath: file.storagePath,
+      mimeType: file.mimeType,
+      fileSize: typeof file.fileSize === "number" ? file.fileSize : null,
+      relatedPaperId: paperId,
+      relatedPaperVersionId: paperVersion.id,
+      relatedSubmissionId: submission.id,
+      versionGroupId: randomUUID(),
+      versionNumber: 1,
+      versionLabel: formatLabel,
+      uploadDate: file.uploadedAt ? new Date(file.uploadedAt) : new Date(),
+      isCurrent: true,
+      notes: "新增投稿记录时上传的投稿文档"
+    }));
+    await prisma.fileRecord.createMany({ data: fileRecords });
+    await prisma.submission.update({
+      where: { id: submission.id },
+      data: { submittedFileRecordId: fileRecords[0].id }
+    });
+  }
   revalidatePath("/submissions");
   revalidatePath("/venues");
   revalidatePath("/dashboard");

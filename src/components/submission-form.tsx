@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { FileText, Loader2, Upload, X } from "lucide-react";
 import { createSubmission } from "@/app/actions";
 import {
-  fileTypeLabels,
   finalSubmissionResultLabels,
   forumSubmissionStatusLabels,
   journalSubmissionStatusLabels,
@@ -17,25 +17,59 @@ type PaperOption = {
   title: string;
 };
 
-type FileOption = {
-  id: string;
+type UploadedSubmissionFile = {
   fileName: string;
   fileType: string;
-  fileSize: number | null;
-  versionNumber: number;
-  versionLabel: string | null;
-  relatedPaperId: string | null;
+  fileUrl: string;
+  downloadUrl?: string;
+  storageProvider?: string;
+  storagePath?: string;
+  mimeType?: string;
+  fileSize: number;
+  uploadedAt: string;
 };
 
-export function SubmissionForm({ papers, files }: { papers: PaperOption[]; files: FileOption[] }) {
+export function SubmissionForm({ papers }: { papers: PaperOption[] }) {
   const [paperId, setPaperId] = useState(papers[0]?.id ?? "");
   const [submissionType, setSubmissionType] = useState("FORUM");
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedSubmissionFile[]>([]);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadingCount, setUploadingCount] = useState(0);
   const statusOptions = submissionType === "JOURNAL" ? journalSubmissionStatusLabels : forumSubmissionStatusLabels;
   const isJournal = submissionType === "JOURNAL";
-  const paperFiles = files.filter((file) => !file.relatedPaperId || file.relatedPaperId === paperId);
+  const isUploading = uploadingCount > 0;
+
+  const uploadDocuments = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const selectedFiles = Array.from(files);
+    setUploadError("");
+    setUploadingCount(selectedFiles.length);
+
+    const results = await Promise.all(selectedFiles.map(async (file) => {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("usage", "submission");
+      try {
+        const response = await fetch("/api/files/upload", { method: "POST", body });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error ?? `${file.name} 上传失败`);
+        return { file: data as UploadedSubmissionFile, error: "" };
+      } catch (error) {
+        return { file: null, error: error instanceof Error ? `${file.name}：${error.message}` : `${file.name} 上传失败` };
+      } finally {
+        setUploadingCount((count) => Math.max(0, count - 1));
+      }
+    }));
+
+    const successfulFiles = results.flatMap((result) => result.file ? [result.file] : []);
+    const errors = results.map((result) => result.error).filter(Boolean);
+    setUploadedFiles((current) => [...current, ...successfulFiles]);
+    setUploadError(errors.join("；"));
+  };
 
   return (
     <form action={createSubmission} className="panel grid gap-5 p-5">
+      <input type="hidden" name="uploadedSubmissionFiles" value={JSON.stringify(uploadedFiles)} />
       <div className="rounded-lg border border-line bg-slate-50 p-4">
         <div className="mb-3 text-sm font-semibold text-ink">投稿类型</div>
         <div className="grid gap-3 md:grid-cols-3">
@@ -116,37 +150,54 @@ export function SubmissionForm({ papers, files }: { papers: PaperOption[]; files
       </div>
 
       <section className="rounded-lg border border-line bg-slate-50 p-4">
-        <h2 className="mb-3 text-sm font-semibold text-ink">投稿格式与文档</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <label><span className="label">格式文档链接</span><input name="formatDocumentUrl" type="url" className="field" placeholder="保存对应格式稿件或附件链接" /></label>
-          <label><span className="label">字数要求</span><input name="wordLimit" type="number" className="field" /></label>
-          <label><span className="label">实际字数</span><input name="actualWordCount" type="number" className="field" /></label>
-          <label><span className="label">参考文献格式</span><input name="referenceStyle" className="field" placeholder="例如 GB/T 7714、APA" /></label>
-          <label><span className="label">注释格式</span><input name="citationStyle" className="field" /></label>
-        </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label><span className="label">该论坛 / 期刊要求的格式</span><textarea name="formatRequirementText" rows={4} className="field" placeholder="记录官网或通知里的格式要求、匿名要求、标题摘要关键词要求等" /></label>
-          <label><span className="label">文件命名规则 / 格式备注</span><textarea name="fileNamingRule" rows={4} className="field" placeholder="例如 论文题目-匿名版.docx；或记录已经如何处理格式" /></label>
-        </div>
-        <div className="mt-4">
-          <label>
-            <span className="label">绑定投稿文件版本</span>
-            <select name="submittedFileRecordId" className="field" defaultValue="">
-              <option value="">暂不绑定</option>
-              {paperFiles.map((file) => (
-                <option key={file.id} value={file.id}>
-                  {file.fileName} · {fileTypeLabels[file.fileType] ?? file.fileType} · V{file.versionNumber}{file.versionLabel ? ` · ${file.versionLabel}` : ""} · {formatFileSize(file.fileSize)}
-                </option>
-              ))}
-            </select>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">上传投稿文档</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-500">支持一次选择或分多次添加多个 PDF、DOC、DOCX 文件，系统会自动识别并保留原文件名。</p>
+          </div>
+          <label className={`btn-secondary cursor-pointer ${isUploading ? "pointer-events-none opacity-60" : ""}`}>
+            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {isUploading ? `正在上传 ${uploadingCount} 个文件` : "选择投稿文档"}
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx"
+              className="hidden"
+              disabled={isUploading}
+              onChange={(event) => {
+                void uploadDocuments(event.target.files);
+                event.target.value = "";
+              }}
+            />
           </label>
-          <p className="mt-2 text-xs leading-5 text-slate-500">绑定后，投稿记录会引用这个文件版本；替换文件时会生成新版本，不会覆盖历史版本。</p>
+        </div>
+
+        {uploadError ? <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{uploadError}</div> : null}
+
+        <div className="mt-4 grid gap-2">
+          {uploadedFiles.map((file, index) => (
+            <div key={`${file.fileUrl}-${index}`} className="flex items-center gap-3 rounded-md border border-line bg-white px-3 py-2.5">
+              <FileText className="h-5 w-5 shrink-0 text-sky" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-ink">{file.fileName}</div>
+                <div className="mt-0.5 text-xs text-slate-500">{file.mimeType || file.fileType} · {formatFileSize(file.fileSize)}</div>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary h-8 w-8 px-0"
+                title="从本次投稿中移除"
+                onClick={() => setUploadedFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          {!isUploading && uploadedFiles.length === 0 ? <div className="rounded-md border border-dashed border-line bg-white px-3 py-5 text-center text-sm text-slate-500">尚未上传投稿文档</div> : null}
         </div>
       </section>
 
       <div className="grid gap-4 md:grid-cols-3">
         <label><span className="label">投稿系统链接</span><input name="submissionSystemUrl" type="url" className="field" /></label>
-        <label><span className="label">实际提交文件链接</span><input name="submittedFileUrl" type="url" className="field" /></label>
         <label><span className="label">投稿回执链接</span><input name="receiptUrl" type="url" className="field" /></label>
       </div>
       <div className="grid gap-3 rounded-lg bg-slate-50 p-4 md:grid-cols-2">
@@ -160,7 +211,7 @@ export function SubmissionForm({ papers, files }: { papers: PaperOption[]; files
         <label><span className="label">下一步计划</span><textarea name="nextAction" rows={4} className="field" /></label>
       </div>
       <div className="flex justify-end">
-        <button className="btn-primary">
+        <button className="btn-primary" disabled={isUploading}>
           保存投稿记录
         </button>
       </div>
