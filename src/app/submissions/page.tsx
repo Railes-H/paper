@@ -3,20 +3,20 @@ import type { Paper, PaperVersion, Submission, Venue } from "@prisma/client";
 import { deleteSubmission } from "@/app/actions";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { SubmissionStatusEditor } from "@/components/submission-status-editor";
 import { StatusBadge } from "@/components/status-badge";
-import { rejectReasonCategoryLabels, reviewStageLabels, submissionResultLabels, submissionStatusLabels, venueTypeLabels } from "@/lib/labels";
+import { rejectReasonCategoryLabels, reviewStageLabels, submissionStatusLabels, venueTypeLabels } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function SubmissionsPage({ searchParams }: { searchParams?: { q?: string; status?: string; type?: string; result?: string; year?: string; format?: string; rejectionReview?: string } }) {
+export default async function SubmissionsPage({ searchParams }: { searchParams?: { q?: string; status?: string; type?: string; year?: string; format?: string; rejectionReview?: string } }) {
   const year = searchParams?.year ? Number(searchParams.year) : null;
   const submissions = await prisma.submission.findMany({
     where: {
       status: searchParams?.status ? (searchParams.status as any) : undefined,
       submissionType: searchParams?.type ? (searchParams.type as any) : undefined,
-      result: searchParams?.result ? (searchParams.result as any) : undefined,
       formatChecked: searchParams?.format ? searchParams.format === "true" : undefined,
       rejectReasonCategory: searchParams?.rejectionReview === "missing" ? null : undefined,
       submissionDate: year ? { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) } : undefined,
@@ -43,7 +43,7 @@ export default async function SubmissionsPage({ searchParams }: { searchParams?:
   return (
     <>
       <PageHeader title="投稿记录" description="按论文标题归档投稿历史，记录投向的论坛或期刊、目标格式要求、格式文档和当前进度。" actionHref="/submissions/new" actionLabel="新增投稿记录" backHref="/dashboard" />
-      <form className="panel mb-5 grid gap-3 p-4 md:grid-cols-[1fr_145px_145px_145px_120px_145px_170px_auto]">
+      <form className="panel mb-5 grid gap-3 p-4 md:grid-cols-[1fr_145px_145px_120px_145px_170px_auto]">
         <input name="q" placeholder="搜索论文标题或投稿对象" className="field" defaultValue={searchParams?.q ?? ""} />
         <select name="status" className="field" defaultValue={searchParams?.status ?? ""}>
           <option value="">全部状态</option>
@@ -52,10 +52,6 @@ export default async function SubmissionsPage({ searchParams }: { searchParams?:
         <select name="type" className="field" defaultValue={searchParams?.type ?? ""}>
           <option value="">全部类型</option>
           {Object.entries(venueTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </select>
-        <select name="result" className="field" defaultValue={searchParams?.result ?? ""}>
-          <option value="">全部结果</option>
-          {Object.entries(submissionResultLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
         <input name="year" placeholder="年份" className="field" defaultValue={searchParams?.year ?? ""} />
         <select name="format" className="field" defaultValue={searchParams?.format ?? ""}>
@@ -97,14 +93,13 @@ function SubmissionSection({
         <h2 className="text-base font-semibold text-ink">{title}</h2>
         <p className="mt-1 text-sm text-slate-500">共 {submissions.length} 条投稿记录，按投稿时间从近到远排列。</p>
       </div>
-      <table className="w-full min-w-[1320px]">
+      <table className="w-full min-w-[1180px]">
         <thead>
           <tr>
             <th className="table-th">投稿对象</th>
             <th className="table-th">类型</th>
             <th className="table-th">投稿日期</th>
             <th className="table-th">状态</th>
-            <th className="table-th">结果</th>
             <th className="table-th">要求格式</th>
             <th className="table-th">格式文档</th>
             <th className="table-th">实际提交文件</th>
@@ -123,8 +118,7 @@ function SubmissionSection({
               </td>
               <td className="table-td">{venueTypeLabels[submission.submissionType]}</td>
               <td className="table-td">{formatDate(submission.submissionDate)}</td>
-              <td className="table-td"><StatusBadge tone={submission.status === "ACCEPTED" ? "green" : submission.status === "REJECTED" ? "red" : "blue"}>{submissionStatusLabels[submission.status]}</StatusBadge></td>
-              <td className="table-td">{submissionResultLabels[submission.result]}</td>
+              <td className="table-td"><SubmissionStatusEditor id={submission.id} status={submission.status} submissionType={submission.submissionType} /></td>
               <td className="table-td max-w-[260px]">
                 <div className="font-medium text-ink">{submission.paperVersion.versionName}</div>
                 <div className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{submission.paperVersion.formatRequirementText ?? "未记录具体格式要求"}</div>
@@ -146,9 +140,12 @@ function SubmissionSection({
               </td>
               <td className="table-td">{submission.nextAction ?? "-"}</td>
               <td className="table-td">
-                <form action={deleteSubmission.bind(null, submission.id)}>
-                  <button className="btn-danger h-8">删除</button>
-                </form>
+                <div className="flex items-center gap-2">
+                  <Link className="btn-secondary h-8" href={`/submissions/${submission.id}/edit`}>编辑</Link>
+                  <form action={deleteSubmission.bind(null, submission.id)}>
+                    <button className="btn-danger h-8">删除</button>
+                  </form>
+                </div>
               </td>
             </tr>
           ))}

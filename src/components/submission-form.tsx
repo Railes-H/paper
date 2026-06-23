@@ -4,7 +4,6 @@ import { useState } from "react";
 import { FileText, Loader2, Upload, X } from "lucide-react";
 import { createSubmission } from "@/app/actions";
 import {
-  finalSubmissionResultLabels,
   forumSubmissionStatusLabels,
   journalSubmissionStatusLabels,
   reviewStageLabels,
@@ -122,15 +121,6 @@ export function SubmissionForm({ papers }: { papers: PaperOption[] }) {
             ))}
           </select>
         </label>
-        <label>
-          <span className="label">最终结果</span>
-          <select name="result" defaultValue="PENDING" className="field">
-            {Object.entries(finalSubmissionResultLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </label>
-        <label><span className="label">结果日期</span><input name="resultDate" type="date" className="field" /></label>
         {isJournal ? (
           <>
             <label>

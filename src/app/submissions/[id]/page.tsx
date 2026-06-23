@@ -11,7 +11,6 @@ import {
   rejectionSeverityLabels,
   reuseAfterRejectLabels,
   nextSubmissionStrategyLabels,
-  submissionResultLabels,
   submissionStatusLabels
 } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
@@ -46,7 +45,7 @@ export default async function SubmissionDetailPage({ params }: { params: { id: s
 
   return (
     <>
-      <PageHeader title="投稿记录详情" description="查看本次投稿的目标对象、格式要求、格式文档、结果、复盘和下一步建议。" backHref="/submissions" />
+      <PageHeader title="投稿记录详情" description="查看本次投稿的对象、当前状态、相关文件、复盘和下一步建议。" backHref="/submissions" actionHref={`/submissions/${submission.id}/edit`} actionLabel="编辑投稿记录" />
       <section className="panel mb-6 p-5">
         <h2 className="mb-4 text-base font-semibold text-ink">投稿概况</h2>
         <div className="grid gap-4 text-sm md:grid-cols-4">
@@ -55,8 +54,6 @@ export default async function SubmissionDetailPage({ params }: { params: { id: s
           <Info label="投稿对象" value={submission.venue.name} />
           <Info label="投稿日期" value={formatDate(submission.submissionDate)} />
           <div><div className="label">状态</div><StatusBadge tone="blue">{submissionStatusLabels[submission.status]}</StatusBadge></div>
-          <div><div className="label">结果</div><StatusBadge tone={submission.result === "ACCEPTED" ? "green" : submission.result === "REJECTED" ? "red" : "slate"}>{submissionResultLabels[submission.result]}</StatusBadge></div>
-          <Info label="结果日期" value={formatDate(submission.resultDate)} />
           <Info label="下一步计划" value={submission.nextAction ?? "-"} />
           <Info label="格式文档" value={submission.paperVersion.fileUrl ?? "-"} />
           <Info label="提交文件" value={submission.submittedFileRecord?.fileName ?? submission.submittedFileUrl ?? "-"} />

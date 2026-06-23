@@ -53,6 +53,14 @@ function parseSubmissionUploads(value: FormDataEntryValue | null): SubmissionUpl
   }
 }
 
+function resultForSubmissionStatus(status: string): SubmissionResult {
+  if (status === "ACCEPTED") return "ACCEPTED";
+  if (status === "REJECTED") return "REJECTED";
+  if (status === "REVISION" || status === "REVISED") return "REVISION";
+  if (status === "WITHDRAWN") return "WITHDRAWN";
+  return "PENDING";
+}
+
 export async function createPaper(formData: FormData) {
   const uploadedFileRecordId = parseOptionalString(formData.get("uploadedFileRecordId"));
   const uploadedFileUrl = parseOptionalString(formData.get("uploadedFileUrl"));
@@ -261,6 +269,7 @@ export async function createSubmission(formData: FormData) {
   const paperId = parseString(formData.get("paperId"));
   const venueName = parseString(formData.get("venueName"));
   const submissionType = formData.get("submissionType") as VenueType;
+  const status = formData.get("status") as SubmissionStatus;
   const isJournal = submissionType === "JOURNAL";
   const uploadedFiles = parseSubmissionUploads(formData.get("uploadedSubmissionFiles"));
   const primaryFile = uploadedFiles[0];
@@ -296,9 +305,8 @@ export async function createSubmission(formData: FormData) {
       submissionType,
       submissionDate: parseDate(formData.get("submissionDate")),
       deadline: parseDate(formData.get("deadline")),
-      status: formData.get("status") as SubmissionStatus,
-      result: formData.get("result") as SubmissionResult,
-      resultDate: parseDate(formData.get("resultDate")),
+      status,
+      result: resultForSubmissionStatus(status),
       submissionSystemUrl: parseOptionalString(formData.get("submissionSystemUrl")),
       submittedFileUrl: primaryFile?.fileUrl,
       receiptUrl: parseOptionalString(formData.get("receiptUrl")),
@@ -363,6 +371,96 @@ export async function createSubmission(formData: FormData) {
 export async function deleteSubmission(id: string) {
   await prisma.submission.delete({ where: { id } });
   revalidatePath("/submissions");
+}
+
+export async function updateSubmissionStatus(id: string, status: string) {
+  if (!Object.prototype.hasOwnProperty.call({
+    PREPARING: true,
+    SUBMITTED: true,
+    WAITING_RESULT: true,
+    INITIAL_REVIEW: true,
+    EXTERNAL_REVIEW: true,
+    REVISION: true,
+    REVISED: true,
+    ACCEPTED: true,
+    REJECTED: true,
+    WITHDRAWN: true,
+    ARCHIVED: true
+  }, status)) {
+    throw new Error("无效的投稿状态");
+  }
+
+  await prisma.submission.update({ where: { id }, data: { status, result: resultForSubmissionStatus(status) } });
+  revalidatePath("/submissions");
+  revalidatePath(`/submissions/${id}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
+}
+
+export async function updateSubmission(id: string, formData: FormData) {
+  const current = await prisma.submission.findUnique({ where: { id }, select: { paperVersionId: true } });
+  if (!current) throw new Error("投稿记录不存在");
+
+  const paperId = parseString(formData.get("paperId"));
+  const venueName = parseString(formData.get("venueName"));
+  const submissionType = formData.get("submissionType") as VenueType;
+  const status = formData.get("status") as SubmissionStatus;
+  const isJournal = submissionType === "JOURNAL";
+  const existingVenue = await prisma.venue.findFirst({
+    where: { name: venueName, type: submissionType },
+    select: { id: true }
+  });
+  const venue = existingVenue ?? await prisma.venue.create({
+    data: { name: venueName, type: submissionType },
+    select: { id: true }
+  });
+
+  await prisma.$transaction([
+    prisma.paperVersion.update({
+      where: { id: current.paperVersionId },
+      data: {
+        paperId,
+        targetVenueId: venue.id,
+        versionName: parseString(formData.get("formatLabel")),
+        versionType: submissionType
+      }
+    }),
+    prisma.submission.update({
+      where: { id },
+      data: {
+        paperId,
+        venueId: venue.id,
+        submissionType,
+        submissionDate: parseDate(formData.get("submissionDate")),
+        deadline: parseDate(formData.get("deadline")),
+        status,
+        result: resultForSubmissionStatus(status),
+        submissionSystemUrl: parseOptionalString(formData.get("submissionSystemUrl")),
+        receiptUrl: parseOptionalString(formData.get("receiptUrl")),
+        submissionMaterials: parseOptionalString(formData.get("submissionMaterials")),
+        formatChecked: parseBoolean(formData.get("formatChecked")),
+        submittedSuccessfully: parseBoolean(formData.get("submittedSuccessfully")),
+        reviewStage: isJournal ? (formData.get("reviewStage") as ReviewStage) : "NOT_STARTED",
+        reviewNotes: parseOptionalString(formData.get("reviewNotes")),
+        revisionDate: isJournal ? parseDate(formData.get("revisionDate")) : null,
+        revisionDeadline: isJournal ? parseDate(formData.get("revisionDeadline")) : null,
+        revisionSubmittedDate: isJournal ? parseDate(formData.get("revisionSubmittedDate")) : null,
+        acceptDate: parseDate(formData.get("acceptDate")),
+        rejectDate: parseDate(formData.get("rejectDate")),
+        nextAction: parseOptionalString(formData.get("nextAction"))
+      }
+    }),
+    prisma.fileRecord.updateMany({
+      where: { relatedSubmissionId: id },
+      data: { relatedPaperId: paperId, relatedPaperVersionId: current.paperVersionId }
+    })
+  ]);
+
+  revalidatePath("/submissions");
+  revalidatePath(`/submissions/${id}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
+  redirect(`/submissions/${id}`);
 }
 
 export async function updateRejectionReview(id: string, formData: FormData) {
