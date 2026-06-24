@@ -45,13 +45,13 @@ export function SubmissionStatusEditor({ id, status, submissionType }: { id: str
     <>
       <button
         type="button"
-        className={`inline-flex h-8 items-center gap-1.5 rounded-md border-2 px-2.5 text-xs font-black transition hover:-translate-y-0.5 ${statusStyles[currentStatus] ?? statusStyles.PREPARING}`}
+        className={`inline-flex h-8 min-w-[112px] shrink-0 items-center justify-between gap-1.5 whitespace-nowrap rounded-md border-2 px-2.5 text-xs font-black leading-none transition hover:-translate-y-0.5 ${statusStyles[currentStatus] ?? statusStyles.PREPARING}`}
         onClick={() => setOpen(true)}
         aria-label="编辑投稿状态"
       >
-        {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="h-2 w-2 rounded-full bg-current" />}
-        {submissionStatusLabels[currentStatus] ?? currentStatus}
-        <ChevronDown className="h-3.5 w-3.5" />
+        {isPending ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <span className="h-2 w-2 shrink-0 rounded-full bg-current" />}
+        <span className="whitespace-nowrap">{submissionStatusLabels[currentStatus] ?? currentStatus}</span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0" />
       </button>
 
       {open ? (
