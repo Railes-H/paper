@@ -82,6 +82,45 @@ textarea {
     @apply border-t border-orange-100 px-4 py-3 text-sm text-slate-700;
   }
 
+  .submission-status-trigger {
+    display: inline-grid;
+    grid-template-columns: 8px max-content 14px;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: 6px;
+    width: max-content;
+    min-width: 112px;
+    height: 32px;
+    padding: 0 10px;
+    border-width: 2px;
+    border-radius: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+    transition: transform 160ms ease;
+  }
+
+  .submission-status-trigger:hover {
+    transform: translateY(-2px);
+  }
+
+  .submission-status-trigger > svg,
+  .submission-status-trigger > span {
+    min-width: 0;
+    flex-shrink: 0;
+  }
+
+  .submission-status-label {
+    display: block;
+    width: max-content;
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed;
+  }
+
   .paper-link {
     @apply font-bold text-sky underline-offset-4 hover:text-primary hover:underline;
   }

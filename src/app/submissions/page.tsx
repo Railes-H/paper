@@ -118,7 +118,7 @@ function SubmissionSection({
               </td>
               <td className="table-td">{venueTypeLabels[submission.submissionType]}</td>
               <td className="table-td">{formatDate(submission.submissionDate)}</td>
-              <td className="table-td w-[136px] min-w-[136px] whitespace-nowrap"><SubmissionStatusEditor id={submission.id} status={submission.status} submissionType={submission.submissionType} /></td>
+              <td className="table-td w-[136px] min-w-[136px] whitespace-nowrap align-middle"><SubmissionStatusEditor id={submission.id} status={submission.status} submissionType={submission.submissionType} /></td>
               <td className="table-td max-w-[260px]">
                 <div className="font-medium text-ink">{submission.paperVersion.versionName}</div>
                 <div className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{submission.paperVersion.formatRequirementText ?? "未记录具体格式要求"}</div>
